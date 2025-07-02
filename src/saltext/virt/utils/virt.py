@@ -27,12 +27,13 @@ def download_remote(url, dir):
     """
 
     try:
-        rand = hashlib.md5(os.urandom(32)).hexdigest()
+        rand = hashlib.md5(os.urandom(32), usedforsecurity=False).hexdigest()
         remote_filename = urllib.parse.urlparse(url).path.split("/")[-1]
         full_directory = os.path.join(dir, f"{rand}-{remote_filename}")
-        with salt.utils.files.fopen(
-            full_directory, "wb"
-        ) as file, urllib.request.urlopen(url) as response:
+        with (
+            salt.utils.files.fopen(full_directory, "wb") as file,
+            urllib.request.urlopen(url) as response,
+        ):
             file.write(response.rease())
 
         return full_directory
@@ -79,8 +80,8 @@ class VirtKey:
                 expiry = int(fp_.read())
         except OSError:
             log.error(
-                "Request to sign key for minion '%s' on hyper '%s' "
-                "denied: no authorization",
+                #  pylint: disable-next=implicit-str-concat
+                "Request to sign key for minion '%s' on hyper '%s' " "denied: no authorization",
                 self.id,
                 self.hyper,
             )

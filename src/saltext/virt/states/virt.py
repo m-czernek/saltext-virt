@@ -19,7 +19,8 @@ import salt.utils.args
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.versions
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import CommandExecutionError
+from salt.exceptions import SaltInvocationError
 
 try:
     import libvirt  # pylint: disable=import-error
@@ -105,6 +106,7 @@ def keys(name, basepath="/etc/pki", **kwargs):
         "cacert": os.path.join(basepath, "CA", "cacert.pem"),
     }
 
+    #  pylint: disable-next=consider-using-dict-items
     for key in paths:
         p_key = f"libvirt.{key}.pem"
         if p_key not in pillar:
@@ -158,9 +160,9 @@ def _virt_call(
     result = True if not __opts__["test"] else None
     ret = {"name": domain, "changes": {}, "result": result, "comment": ""}
     targeted_domains = fnmatch.filter(__salt__["virt.list_domains"](), domain)
-    changed_domains = list()
-    ignored_domains = list()
-    noaction_domains = list()
+    changed_domains = []
+    ignored_domains = []
+    noaction_domains = []
     for targeted_domain in targeted_domains:
         try:
             action_needed = True
@@ -515,8 +517,11 @@ def defined(
         .. code-block:: python
 
             {
-                'memory': {'mode': 'strict', 'nodeset': '0-11'},
-                'memnodes': {0: {'mode': 'strict', 'nodeset': 1}, 1: {'mode': 'preferred', 'nodeset': 2}}
+                "memory": {"mode": "strict", "nodeset": "0-11"},
+                "memnodes": {
+                    0: {"mode": "strict", "nodeset": 1},
+                    1: {"mode": "preferred", "nodeset": 2},
+                },
             }
 
     :param hypervisor_features:
@@ -1032,6 +1037,7 @@ def running(
         autostart=autostart,
     )
 
+    #  pylint: disable-next=unused-variable
     result = True if not __opts__["test"] else None
     if ret["result"] is None or ret["result"]:
         changed = ret["changes"].get(name, {}).get("definition", False)
@@ -1171,14 +1177,10 @@ def saved(name, suffix=None):
             - suffix: periodic
     """
 
-    return _virt_call(
-        name, "snapshot", "saved", "Snapshots has been taken", suffix=suffix
-    )
+    return _virt_call(name, "snapshot", "saved", "Snapshots has been taken", suffix=suffix)
 
 
-def reverted(
-    name, snapshot=None, cleanup=False
-):  # pylint: disable=redefined-outer-name
+def reverted(name, snapshot=None, cleanup=False):  # pylint: disable=redefined-outer-name
     """
     .. deprecated:: 2016.3.0
 
@@ -1204,9 +1206,9 @@ def reverted(
         if not domains:
             ret["comment"] = f'No domains found for criteria "{name}"'
         else:
-            ignored_domains = list()
+            ignored_domains = []
             if len(domains) > 1:
-                ret["changes"] = {"reverted": list()}
+                ret["changes"] = {"reverted": []}
             for domain in domains:
                 result = {}
                 try:
@@ -1230,9 +1232,7 @@ def reverted(
 
             ret["result"] = len(domains) != len(ignored_domains)
             if ret["result"]:
-                ret["comment"] = "Domain{} has been reverted".format(
-                    len(domains) > 1 and "s" or ""
-                )
+                ret["comment"] = "Domain{} has been reverted".format(len(domains) > 1 and "s" or "")
             if ignored_domains:
                 ret["changes"]["ignored"] = ignored_domains
             if not ret["changes"]["reverted"]:
@@ -1796,9 +1796,8 @@ def network_running(
         password=password,
     )
 
-    defined = name in ret["changes"] and ret["changes"][name].startswith(
-        "Network defined"
-    )
+    #  pylint: disable-next=unused-variable
+    defined = name in ret["changes"] and ret["changes"][name].startswith("Network defined")
 
     result = True if not __opts__["test"] else None
     if ret["result"] is None or ret["result"]:
@@ -1969,9 +1968,7 @@ def pool_defined(
                                 )
                         action = ", built"
 
-                action = (
-                    f"{action}, autostart flag changed" if needs_autostart else action
-                )
+                action = f"{action}, autostart flag changed" if needs_autostart else action
                 ret["changes"][name] = f"Pool updated{action}"
                 ret["comment"] = f"Pool {name} updated{action}"
 
@@ -2379,9 +2376,7 @@ def volume_defined(
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    pools = __salt__["virt.list_pools"](
-        connection=connection, username=username, password=password
-    )
+    pools = __salt__["virt.list_pools"](connection=connection, username=username, password=password)
     if pool not in pools:
         raise SaltInvocationError(f"Storage pool {pool} not existing")
 
@@ -2397,16 +2392,13 @@ def volume_defined(
         ret["comment"] = "volume is existing"
         # if backing store or format are different, return an error
         backing_store_info = vol_infos.get("backing_store") or {}
-        same_backing_store = backing_store_info.get("path") == (
-            backing_store or {}
-        ).get("path") and backing_store_info.get("format") == (backing_store or {}).get(
-            "format"
-        )
-        if not same_backing_store or (
-            vol_infos.get("format") != format and format is not None
-        ):
+        same_backing_store = backing_store_info.get("path") == (backing_store or {}).get(
+            "path"
+        ) and backing_store_info.get("format") == (backing_store or {}).get("format")
+        if not same_backing_store or (vol_infos.get("format") != format and format is not None):
             ret["result"] = False
             ret["comment"] = (
+                #  pylint: disable-next=implicit-str-concat
                 "A volume with the same name but different backing store or format is"
                 " existing"
             )
@@ -2415,9 +2407,7 @@ def volume_defined(
         # otherwise assume the volume has already been defined
         # if the sizes don't match, issue a warning comment: too dangerous to do this for now
         if int(vol_infos.get("capacity")) != int(size) * 1024 * 1024:
-            ret["comment"] = (
-                "The capacity of the volume is different, but no resize performed"
-            )
+            ret["comment"] = "The capacity of the volume is different, but no resize performed"
         return ret
 
     ret["result"] = None if __opts__["test"] else True
@@ -2440,9 +2430,7 @@ def volume_defined(
             )
             test_comment = ""
 
-        ret["comment"] = "Volume {} {}defined in pool {}".format(
-            name, test_comment, pool
-        )
+        ret["comment"] = f"Volume {name} {test_comment}defined in pool {pool}"
         ret["changes"] = {f"{pool}/{name}": {"old": "", "new": "defined"}}
     except libvirt.libvirtError as err:
         ret["comment"] = err.get_error_message()

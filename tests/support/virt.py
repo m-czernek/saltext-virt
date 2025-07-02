@@ -7,25 +7,21 @@ import attr
 from pytestshellutils.utils import ports
 from saltfactories.daemons.container import SaltMinion
 
+#  pylint: disable-next=import-error
 from tests.conftest import CODE_DIR
 
 log = logging.getLogger(__name__)
 
 
 @attr.s(kw_only=True, slots=True)
+#  pylint: disable-next=too-many-ancestors
 class SaltVirtMinionContainerFactory(SaltMinion):
 
     host_uuid = attr.ib(default=attr.Factory(uuid.uuid4))
-    ssh_port = attr.ib(
-        default=attr.Factory(ports.get_unused_localhost_port), repr=False
-    )
+    ssh_port = attr.ib(default=attr.Factory(ports.get_unused_localhost_port), repr=False)
     sshd_port = attr.ib(default=attr.Factory(ports.get_unused_localhost_port))
-    libvirt_tcp_port = attr.ib(
-        default=attr.Factory(ports.get_unused_localhost_port), repr=False
-    )
-    libvirt_tls_port = attr.ib(
-        default=attr.Factory(ports.get_unused_localhost_port), repr=False
-    )
+    libvirt_tcp_port = attr.ib(default=attr.Factory(ports.get_unused_localhost_port), repr=False)
+    libvirt_tls_port = attr.ib(default=attr.Factory(ports.get_unused_localhost_port), repr=False)
 
     uri = attr.ib(init=False)
     ssh_uri = attr.ib(init=False)
@@ -86,9 +82,7 @@ class SaltVirtMinionContainerFactory(SaltMinion):
         ret = self.run("bash", "-c", "echo $SALT_PY_VERSION")
         assert ret.returncode == 0
         if not ret.stdout:
-            log.warning(
-                "The 'SALT_PY_VERSION' environment variable is not set on the container"
-            )
+            log.warning("The 'SALT_PY_VERSION' environment variable is not set on the container")
             salt_py_version = 3
             ret = self.run(
                 "python3",

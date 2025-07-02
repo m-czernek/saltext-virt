@@ -67,9 +67,9 @@ The calls not using the libvirt connection setup are:
 - ``is_*hyper``
 - all migration functions
 
-- `libvirt ESX URI format <http://libvirt.org/drvesx.html#uriformat>`_
-- `libvirt URI format <http://libvirt.org/uri.html#URI_config>`_
-- `libvirt authentication configuration <http://libvirt.org/auth.html#Auth_client_config>`_
+- `libvirt ESX URI format <http://libvirt.org/drvesx.html>`_
+- `libvirt URI format <http://libvirt.org/uri.html>`_
+- `libvirt authentication configuration <http://libvirt.org/auth.html>`_
 
 Units
 ==========
@@ -117,6 +117,8 @@ YB      10**24
 ======  =======
 """
 
+# pylint: disable=import-error
+
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
 
@@ -137,7 +139,6 @@ from xml.etree import ElementTree
 from xml.sax import saxutils
 
 import jinja2.exceptions
-
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -145,10 +146,13 @@ import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.virt
+
+#  pylint: disable-next=consider-using-from-import
 import salt.utils.xmlutil as xmlutil
 import salt.utils.yaml
 from salt._compat import ipaddress
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import CommandExecutionError
+from salt.exceptions import SaltInvocationError
 
 try:
     import libvirt  # pylint: disable=import-error
@@ -166,11 +170,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 # Set up template environment
-JINJA = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(
-        os.path.join(salt.utils.templates.TEMPLATE_DIRNAME, "virt")
-    )
-)
+JINJA = None
 
 CACHE_DIR = "/var/lib/libvirt/saltinst"
 
@@ -189,6 +189,20 @@ def __virtual__():
     if not HAS_LIBVIRT:
         return (False, "Unable to locate or import python libvirt library.")
     return "virt"
+
+
+def __init_jinja():
+    """
+    Init jinja global variable lazily to avoid instantiation at module level
+    """
+    # pylint: disable-next=global-statement
+    global JINJA
+    if not JINJA:
+        JINJA = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(
+                os.path.join(salt.utils.templates.TEMPLATE_DIRNAME, "virt")
+            )
+        )
 
 
 def __get_request_auth(username, password):
@@ -217,17 +231,13 @@ def __get_request_auth(username, password):
                 credential[4] = (
                     username
                     if username
-                    else __salt__["config.get"](
-                        "virt:connection:auth:username", credential[3]
-                    )
+                    else __salt__["config.get"]("virt:connection:auth:username", credential[3])
                 )
             elif credential[0] == libvirt.VIR_CRED_NOECHOPROMPT:
                 credential[4] = (
                     password
                     if password
-                    else __salt__["config.get"](
-                        "virt:connection:auth:password", credential[3]
-                    )
+                    else __salt__["config.get"]("virt:connection:auth:password", credential[3])
                 )
             else:
                 log.info("Unhandled credential type: %s", credential[0])
@@ -266,6 +276,7 @@ def __get_conn(**kwargs):
             conn_str, [auth_types, __get_request_auth(username, password), None], 0
         )
     except Exception:  # pylint: disable=broad-except
+        #  pylint: disable-next=raise-missing-from
         raise CommandExecutionError(
             "Sorry, {} failed to open a connection to the hypervisor "
             "software at {}".format(__grains__["fqdn"], conn_str)
@@ -281,7 +292,9 @@ def _get_domain(conn, *vms, **kwargs):
     :param vms: list of domain names to look for
     :param iterable: True to return an array in all cases
     """
+    #  pylint: disable-next=use-list-literal
     ret = list()
+    #  pylint: disable-next=use-list-literal
     lookup_vms = list()
 
     all_vms = []
@@ -298,6 +311,7 @@ def _get_domain(conn, *vms, **kwargs):
 
     if vms:
         for name in vms:
+            #  pylint: disable-next=no-else-raise
             if name not in all_vms:
                 raise CommandExecutionError(f'The VM "{name}" is not present')
             else:
@@ -323,9 +337,7 @@ def _parse_qemu_img_info(info):
             "file format": disk_infos["format"],
             "disk size": disk_infos["actual-size"],
             "virtual size": disk_infos["virtual-size"],
-            "cluster size": (
-                disk_infos["cluster-size"] if "cluster-size" in disk_infos else None
-            ),
+            "cluster size": (disk_infos["cluster-size"] if "cluster-size" in disk_infos else None),
         }
 
         if "full-backing-filename" in disk_infos.keys():
@@ -338,16 +350,10 @@ def _parse_qemu_img_info(info):
                     "tag": snapshot["name"],
                     "vmsize": snapshot["vm-state-size"],
                     "date": datetime.datetime.fromtimestamp(
-                        float(
-                            "{}.{}".format(snapshot["date-sec"], snapshot["date-nsec"])
-                        )
+                        float("{}.{}".format(snapshot["date-sec"], snapshot["date-nsec"]))
                     ).isoformat(),
                     "vmclock": datetime.datetime.utcfromtimestamp(
-                        float(
-                            "{}.{}".format(
-                                snapshot["vm-clock-sec"], snapshot["vm-clock-nsec"]
-                            )
-                        )
+                        float("{}.{}".format(snapshot["vm-clock-sec"], snapshot["vm-clock-nsec"]))
                     )
                     .time()
                     .isoformat(),
@@ -551,9 +557,7 @@ def _get_disks(conn, dom):
                         backing_path = vol_desc.find("./backingStore/path")
                         backing_format = vol_desc.find("./backingStore/format")
                         if backing_path is not None:
-                            extra_properties["backing file"] = {
-                                "file": backing_path.text
-                            }
+                            extra_properties["backing file"] = {"file": backing_path.text}
                             if backing_format is not None:
                                 extra_properties["backing file"]["file format"] = (
                                     backing_format.get("type")
@@ -581,6 +585,7 @@ def _get_disks(conn, dom):
                 elif elem.get("device", "disk") != "cdrom":
                     # Extract disk sizes, snapshots, backing files
                     try:
+                        #  pylint: disable-next=consider-using-with
                         process = subprocess.Popen(
                             [
                                 "qemu-img",
@@ -623,9 +628,7 @@ def _get_disks(conn, dom):
                     for pool_i in conn.listAllStoragePools():
                         pool_i_xml = ElementTree.fromstring(pool_i.XMLDesc())
                         name_node = pool_i_xml.find("source/name")
-                        if name_node is not None and source_name.startswith(
-                            f"{name_node.text}/"
-                        ):
+                        if name_node is not None and source_name.startswith(f"{name_node.text}/"):
                             qemu_target = "{}{}".format(
                                 pool_i.name(), source_name[len(name_node.text) :]
                             )
@@ -650,9 +653,7 @@ def _get_disks(conn, dom):
             elif disk_type == "volume":
                 pool_name = source.get("pool")
                 volume_name = source.get("volume")
-                qemu_target, extra_properties = _get_disk_volume_data(
-                    pool_name, volume_name
-                )
+                qemu_target, extra_properties = _get_disk_volume_data(pool_name, volume_name)
 
             if not qemu_target:
                 continue
@@ -677,11 +678,13 @@ def _libvirt_creds():
     g_cmd = ["grep", "^\\s*group", "/etc/libvirt/qemu.conf"]
     u_cmd = ["grep", "^\\s*user", "/etc/libvirt/qemu.conf"]
     try:
+        #  pylint: disable-next=consider-using-with
         stdout = subprocess.Popen(g_cmd, stdout=subprocess.PIPE).communicate()[0]
         group = salt.utils.stringutils.to_str(stdout).split('"')[1]
     except IndexError:
         group = "root"
     try:
+        #  pylint: disable-next=consider-using-with
         stdout = subprocess.Popen(u_cmd, stdout=subprocess.PIPE).communicate()[0]
         user = salt.utils.stringutils.to_str(stdout).split('"')[1]
     except IndexError:
@@ -745,6 +748,7 @@ def _migrate(dom, dst_uri, **kwargs):
         try:
             bandwidth_value = int(max_bandwidth)
         except ValueError:
+            #  pylint: disable-next=raise-missing-from
             raise SaltInvocationError(f"Invalid max_bandwidth value: {max_bandwidth}")
         dom.migrateSetMaxSpeed(bandwidth_value)
 
@@ -753,6 +757,7 @@ def _migrate(dom, dst_uri, **kwargs):
         try:
             downtime_value = int(max_downtime)
         except ValueError:
+            #  pylint: disable-next=raise-missing-from
             raise SaltInvocationError(f"Invalid max_downtime value: {max_downtime}")
         dom.migrateSetMaxDowntime(downtime_value)
 
@@ -780,23 +785,21 @@ def _migrate(dom, dst_uri, **kwargs):
             try:
                 params[param_key] = int(comp_option_value)
             except ValueError:
+                #  pylint: disable-next=raise-missing-from
                 raise SaltInvocationError(f"Invalid {comp_option} value")
 
     parallel_connections = kwargs.get("parallel_connections")
     if parallel_connections:
         try:
-            params[libvirt.VIR_MIGRATE_PARAM_PARALLEL_CONNECTIONS] = int(
-                parallel_connections
-            )
+            params[libvirt.VIR_MIGRATE_PARAM_PARALLEL_CONNECTIONS] = int(parallel_connections)
         except ValueError:
+            #  pylint: disable-next=raise-missing-from
             raise SaltInvocationError("Invalid parallel_connections value")
         flags |= libvirt.VIR_MIGRATE_PARALLEL
 
     if __salt__["config.get"]("virt:tunnel"):
         if parallel_connections:
-            raise SaltInvocationError(
-                "Parallel migration isn't compatible with tunneled migration"
-            )
+            raise SaltInvocationError("Parallel migration isn't compatible with tunneled migration")
         flags |= libvirt.VIR_MIGRATE_PEER2PEER
         flags |= libvirt.VIR_MIGRATE_TUNNELLED
 
@@ -808,6 +811,7 @@ def _migrate(dom, dst_uri, **kwargs):
         try:
             postcopy_bandwidth_value = int(postcopy_bandwidth)
         except ValueError:
+            #  pylint: disable-next=raise-missing-from
             raise SaltInvocationError("Invalid postcopy_bandwidth value")
         dom.migrateSetMaxSpeed(
             postcopy_bandwidth_value,
@@ -836,6 +840,7 @@ def _migrate(dom, dst_uri, **kwargs):
         return state and migrated_state in state
     except libvirt.libvirtError as err:
         dst_conn.close()
+        #  pylint: disable-next=raise-missing-from
         raise CommandExecutionError(err.get_error_message())
 
 
@@ -882,6 +887,7 @@ def _disk_from_pool(conn, pool, pool_xml, volume_name):
             {"name": host.get("name"), "port": host.get("port")}
             for host in pool_xml.findall(".//host")
         ]
+        #  pylint: disable-next=unused-variable
         dir_node = pool_xml.find("./source/dir")
         # Gluster and RBD need pool/volume name
         name_node = pool_xml.find("./source/name")
@@ -910,22 +916,21 @@ def _handle_unit(s, def_unit="m"):
     """
     Handle the unit conversion, return the value in bytes
     """
-    ret = salt.utils.stringutils.human_to_bytes(
-        s, default_unit=def_unit, handle_metric=True
-    )
+    ret = salt.utils.stringutils.human_to_bytes(s, default_unit=def_unit, handle_metric=True)
     if ret == 0:
         raise SaltInvocationError("invalid number or unit")
     return ret
 
 
-def nesthash(value=None):
+def _nesthash(value=None):
     """
     create default dict that allows arbitrary level of nesting
     """
-    return collections.defaultdict(nesthash, value or {})
+    return collections.defaultdict(_nesthash, value or {})
 
 
 def _gen_xml(
+    #  pylint: disable-next=unused-argument
     conn,
     name,
     cpu,
@@ -941,7 +946,9 @@ def _gen_xml(
     numatune=None,
     hypervisor_features=None,
     clock=None,
+    #  pylint: disable-next=unused-argument
     serials=None,
+    #  pylint: disable-next=unused-argument
     consoles=None,
     stop_on_reboot=False,
     host_devices=None,
@@ -950,6 +957,7 @@ def _gen_xml(
     """
     Generate the XML string to define a libvirt VM
     """
+    __init_jinja()
     context = {
         "hypervisor": hypervisor,
         "name": name,
@@ -961,19 +969,19 @@ def _gen_xml(
     context["to_kib"] = lambda v: int(_handle_unit(v) / 1024)
     context["yesno"] = lambda v: "yes" if v else "no"
 
-    context["mem"] = nesthash()
+    context["mem"] = _nesthash()
     if isinstance(mem, int):
         context["mem"]["boot"] = mem
         context["mem"]["current"] = mem
     elif isinstance(mem, dict):
-        context["mem"] = nesthash(mem)
+        context["mem"] = _nesthash(mem)
 
-    context["cpu"] = nesthash()
-    context["cputune"] = nesthash()
+    context["cpu"] = _nesthash()
+    context["cputune"] = _nesthash()
     if isinstance(cpu, int):
         context["cpu"]["maximum"] = str(cpu)
     elif isinstance(cpu, dict):
-        context["cpu"] = nesthash(cpu)
+        context["cpu"] = _nesthash(cpu)
 
     if clock:
         offset = "utc" if clock.get("utc", True) else "localtime"
@@ -992,10 +1000,7 @@ def _gen_xml(
     if graphics:
         if "listen" not in graphics:
             graphics["listen"] = {"type": "address", "address": "0.0.0.0"}
-        elif (
-            "address" not in graphics["listen"]
-            and graphics["listen"]["type"] == "address"
-        ):
+        elif "address" not in graphics["listen"] and graphics["listen"]["type"] == "address":
             graphics["listen"]["address"] = "0.0.0.0"
 
         # Graphics of type 'none' means no graphics device at all
@@ -1081,9 +1086,7 @@ def _gen_xml(
 
             # For Xen VMs convert all pool types (issue #58333)
             if hypervisor == "xen" or pool_type in ["rbd", "gluster", "sheepdog"]:
-                disk_context.update(
-                    _disk_from_pool(conn, pool, pool_xml, disk_context["volume"])
-                )
+                disk_context.update(_disk_from_pool(conn, pool, pool_xml, disk_context["volume"]))
 
             else:
                 if pool_type in ["disk", "logical"]:
@@ -1132,15 +1135,12 @@ def _gen_xml(
             elif "usb_device" in hostdevice.listCaps():
                 vendor_id = doc.find(".//vendor").get("id")
                 product_id = doc.find(".//product").get("id")
-                hostdev_context.append(
-                    {"type": "usb", "vendor": vendor_id, "product": product_id}
-                )
+                hostdev_context.append({"type": "usb", "vendor": vendor_id, "product": product_id})
             # For the while we only handle pci and usb passthrough
     except libvirt.libvirtError as err:
         conn.close()
-        raise CommandExecutionError(
-            "Failed to get host devices: " + err.get_error_message()
-        )
+        #  pylint: disable-next=raise-missing-from
+        raise CommandExecutionError("Failed to get host devices: " + err.get_error_message())
     context["hostdevs"] = hostdev_context
 
     context["os_type"] = os_type
@@ -1167,6 +1167,7 @@ def _gen_vol_xml(
     """
     Generate the XML string to define a libvirt storage volume
     """
+    __init_jinja()
     size = int(size) * 1024  # MB
     context = {
         "type": type,
@@ -1204,6 +1205,7 @@ def _gen_net_xml(
     """
     Generate the XML string to define a libvirt network
     """
+    __init_jinja()
     if isinstance(vport, str):
         vport_context = {"type": vport}
     else:
@@ -1282,6 +1284,7 @@ def _gen_pool_xml(
     """
     Generate the XML string to define a libvirt storage pool
     """
+    __init_jinja()
     hosts = [host.split(":") for host in source_hosts or []]
     source = None
     if any(
@@ -1299,14 +1302,11 @@ def _gen_pool_xml(
         source = {
             "devices": source_devices or [],
             "dir": (
-                source_dir
-                if source_format != "cifs" or not source_dir
-                else source_dir.lstrip("/")
+                source_dir if source_format != "cifs" or not source_dir else source_dir.lstrip("/")
             ),
             "adapter": source_adapter,
             "hosts": [
-                {"name": host[0], "port": host[1] if len(host) > 1 else None}
-                for host in hosts
+                {"name": host[0], "port": host[1] if len(host) > 1 else None} for host in hosts
             ],
             "auth": source_auth,
             "name": source_name,
@@ -1333,6 +1333,7 @@ def _gen_secret_xml(auth_type, usage, description):
     """
     Generate a libvirt secret definition XML
     """
+    __init_jinja()
     context = {
         "type": auth_type,
         "usage": usage,
@@ -1386,20 +1387,17 @@ def _zfs_image_create(
 
     if not pool:
         raise CommandExecutionError(
-            "Unable to create new disk {}, please specify the disk pool name".format(
-                disk_name
-            )
+            f"Unable to create new disk {disk_name}, please specify the disk pool name"
         )
 
     destination_fs = os.path.join(pool, f"{vm_name}.{disk_name}")
     log.debug("Image destination will be %s", destination_fs)
 
     existing_disk = __salt__["zfs.list"](name=pool)
+    #  pylint: disable-next=no-else-raise
     if "error" in existing_disk:
         raise CommandExecutionError(
-            "Unable to create new disk {}. {}".format(
-                destination_fs, existing_disk["error"]
-            )
+            "Unable to create new disk {}. {}".format(destination_fs, existing_disk["error"])
         )
     elif destination_fs in existing_disk:
         log.info("ZFS filesystem %s already exists. Skipping creation", destination_fs)
@@ -1411,9 +1409,7 @@ def _zfs_image_create(
         properties[hostname_property_name] = vm_name
 
     if disk_image_name:
-        __salt__["zfs.clone"](
-            name_a=disk_image_name, name_b=destination_fs, properties=properties
-        )
+        __salt__["zfs.clone"](name_a=disk_image_name, name_b=destination_fs, properties=properties)
 
     elif disk_size:
         __salt__["zfs.create"](
@@ -1482,9 +1478,8 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
             os.chmod(img_dest, mode)
 
         except OSError as err:
-            raise CommandExecutionError(
-                f"Problem while copying image. {disk_image} - {err}"
-            )
+            #  pylint: disable-next=raise-missing-from
+            raise CommandExecutionError(f"Problem while copying image. {disk_image} - {err}")
 
     else:
         # Create empty disk
@@ -1509,9 +1504,8 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
             os.chmod(img_dest, mode)
 
         except OSError as err:
-            raise CommandExecutionError(
-                f"Problem while creating volume {img_dest} - {err}"
-            )
+            #  pylint: disable-next=raise-missing-from
+            raise CommandExecutionError(f"Problem while creating volume {img_dest} - {err}")
 
     return img_dest
 
@@ -1562,6 +1556,7 @@ def _disk_volume_create(conn, disk, seeder=None, saltenv="base"):
 
     if backing_store and disk.get("image"):
         raise SaltInvocationError(
+            #  pylint: disable-next=implicit-str-concat
             "Using a template image with a backing store is not possible, "
             "choose either of them."
         )
@@ -1643,9 +1638,7 @@ def _disk_profile(conn, profile, hypervisor, disks, vm_name):
     # Get the disks from the profile
     disklist = []
     if profile:
-        disklist = copy.deepcopy(
-            __salt__["config.get"]("virt:disk", {}).get(profile, default)
-        )
+        disklist = copy.deepcopy(__salt__["config.get"]("virt:disk", {}).get(profile, default))
 
         # Transform the list to remove one level of dictionary and add the name as a property
         disklist = [dict(d, name=name) for disk in disklist for name, d in disk.items()]
@@ -1677,9 +1670,7 @@ def _disk_profile(conn, profile, hypervisor, disks, vm_name):
         if disk.get("source_file") and os.path.exists(disk["source_file"]):
             disk["filename"] = os.path.basename(disk["source_file"])
             if not disk.get("format"):
-                disk["format"] = (
-                    "qcow2" if disk.get("device", "disk") != "cdrom" else "raw"
-                )
+                disk["format"] = "qcow2" if disk.get("device", "disk") != "cdrom" else "raw"
         elif vm_name and disk.get("device", "disk") == "disk":
             _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps)
 
@@ -1720,12 +1711,10 @@ def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
                 device = pool_xml.find("./source/device").get("path")
                 all_volumes = pool_obj.listVolumes()
                 if disk.get("source_file") not in all_volumes:
-                    indexes = [
-                        int(re.sub("[a-z]+", "", vol_name)) for vol_name in all_volumes
-                    ] or [0]
-                    index = min(
-                        idx for idx in range(1, max(indexes) + 2) if idx not in indexes
-                    )
+                    indexes = [int(re.sub("[a-z]+", "", vol_name)) for vol_name in all_volumes] or [
+                        0
+                    ]
+                    index = min(idx for idx in range(1, max(indexes) + 2) if idx not in indexes)
                     disk["filename"] = f"{os.path.basename(device)}{index}"
 
             # Is the user wanting to reuse an existing volume?
@@ -1757,9 +1746,7 @@ def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
 
     elif hypervisor == "bhyve" and vm_name:
         disk["filename"] = "{}.{}".format(vm_name, disk["name"])
-        disk["source_file"] = os.path.join(
-            "/dev/zvol", base_dir or "", disk["filename"]
-        )
+        disk["source_file"] = os.path.join("/dev/zvol", base_dir or "", disk["filename"])
 
     elif hypervisor in ["esxi", "vmware"]:
         if not base_dir:
@@ -1829,9 +1816,7 @@ def _nic_profile(profile_name, hypervisor):
     """
     Compute NIC data based on profile
     """
-    config_data = __salt__["config.get"]("virt:nic", {}).get(
-        profile_name, [{"eth0": {}}]
-    )
+    config_data = __salt__["config.get"]("virt:nic", {}).get(profile_name, [{"eth0": {}}])
 
     interfaces = []
 
@@ -1925,6 +1910,7 @@ def _handle_remote_boot_params(orig_boot):
 
     if keys in cases:
         for key in keys:
+            #  pylint: disable-next=unidiomatic-typecheck
             if key == "efi" and type(orig_boot.get(key)) == bool:
                 new_boot[key] = orig_boot.get(key)
             elif orig_boot.get(key) is not None and salt.utils.virt.check_remote(
@@ -1933,9 +1919,7 @@ def _handle_remote_boot_params(orig_boot):
                 if saltinst_dir is None:
                     os.makedirs(CACHE_DIR)
                     saltinst_dir = CACHE_DIR
-                new_boot[key] = salt.utils.virt.download_remote(
-                    orig_boot.get(key), saltinst_dir
-                )
+                new_boot[key] = salt.utils.virt.download_remote(orig_boot.get(key), saltinst_dir)
         return new_boot
     else:
         raise SaltInvocationError(
@@ -2226,11 +2210,11 @@ def init(
         .. code-block:: python
 
             {
-                'kernel': '/root/f8-i386-vmlinuz',
-                'initrd': '/root/f8-i386-initrd',
-                'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/',
-                'loader': '/usr/share/OVMF/OVMF_CODE.fd',
-                'nvram': '/usr/share/OVMF/OVMF_VARS.ms.fd'
+                "kernel": "/root/f8-i386-vmlinuz",
+                "initrd": "/root/f8-i386-initrd",
+                "cmdline": "console=ttyS0 ks=http://example.com/f8-i386/os/",
+                "loader": "/usr/share/OVMF/OVMF_CODE.fd",
+                "nvram": "/usr/share/OVMF/OVMF_VARS.ms.fd",
             }
 
     :param boot_dev:
@@ -2250,8 +2234,11 @@ def init(
         .. code-block:: python
 
             {
-                'memory': {'mode': 'strict', 'nodeset': '0-11'},
-                'memnodes': {0: {'mode': 'strict', 'nodeset': 1}, 1: {'mode': 'preferred', 'nodeset': 2}}
+                "memory": {"mode": "strict", "nodeset": "0-11"},
+                "memnodes": {
+                    0: {"mode": "strict", "nodeset": 1},
+                    1: {"mode": "preferred", "nodeset": 2},
+                },
             }
 
     :param hypervisor_features:
@@ -2752,7 +2739,7 @@ def init(
         The guest device type. Common values are ``serial``, ``virtio`` or ``usb-serial``, but more are documented in
         `the libvirt documentation <https://libvirt.org/formatdomain.html#consoles-serial-parallel-channel-devices>`_.
 
-    .. rubric:: CLI Example
+    .. rubric:: CLI Example:
 
     .. code-block:: bash
 
@@ -2769,8 +2756,8 @@ def init(
         virt:
             images: /data/my/vm/images/
 
-    .. _disk element: https://libvirt.org/formatdomain.html#elementsDisks
-    .. _graphics element: https://libvirt.org/formatdomain.html#elementsGraphics
+    .. _disk element: https://libvirt.org/formatdomain.html
+    .. _graphics element: https://libvirt.org/formatdomain.html
     """
     try:
         conn = __get_conn(**kwargs)
@@ -2785,9 +2772,7 @@ def init(
             hypervisors = sorted(
                 {
                     x
-                    for y in [
-                        guest["arch"]["domains"].keys() for guest in caps["guests"]
-                    ]
+                    for y in [guest["arch"]["domains"].keys() for guest in caps["guests"]]
                     for x in y
                 }
             )
@@ -2816,6 +2801,7 @@ def init(
             log.debug("Creating disk for VM [ %s ]: %s", name, _disk)
 
             if virt_hypervisor == "vmware":
+                #  pylint: disable-next=no-else-raise
                 if "image" in _disk:
                     # TODO: we should be copying the image file onto the ESX host
                     raise SaltInvocationError(
@@ -2827,9 +2813,7 @@ def init(
                     log.debug("Generating libvirt XML for %s", _disk)
                     volume_name = "{}/{}".format(name, _disk["name"])
                     filename = "{}.{}".format(volume_name, _disk["format"])
-                    vol_xml = _gen_vol_xml(
-                        filename, _disk["size"], format=_disk["format"]
-                    )
+                    vol_xml = _gen_vol_xml(filename, _disk["size"], format=_disk["format"])
                     _define_vol_xml_str(conn, vol_xml, pool=_disk.get("pool"))
 
             elif virt_hypervisor in ["qemu", "kvm", "xen"]:
@@ -2846,6 +2830,7 @@ def init(
                     )
 
                 create_overlay = _disk.get("overlay_image", False)
+                #  pylint: disable-next=unused-variable
                 format = _disk.get("format")
                 if _disk.get("source_file"):
                     if os.path.exists(_disk["source_file"]):
@@ -2874,9 +2859,7 @@ def init(
             else:
                 # Unknown hypervisor
                 raise SaltInvocationError(
-                    "Unsupported hypervisor when handling disk image: {}".format(
-                        virt_hypervisor
-                    )
+                    f"Unsupported hypervisor when handling disk image: {virt_hypervisor}"
                 )
 
         log.debug("Generating VM XML")
@@ -2914,6 +2897,7 @@ def init(
         conn.defineXML(vm_xml)
     except libvirt.libvirtError as err:
         conn.close()
+        #  pylint: disable-next=raise-missing-from
         raise CommandExecutionError(err.get_error_message())
 
     if start:
@@ -2979,23 +2963,13 @@ def _nics_equal(nic1, nic2):
         return {
             "type": source_type,
             "source": (
-                source_getters[source_type](source_node)
-                if source_node is not None
-                else None
+                source_getters[source_type](source_node) if source_node is not None else None
             ),
-            "model": (
-                nic.find("model").attrib["type"]
-                if nic.find("model") is not None
-                else None
-            ),
+            "model": (nic.find("model").attrib["type"] if nic.find("model") is not None else None),
         }
 
     def _get_mac(nic):
-        return (
-            nic.find("mac").attrib["address"].lower()
-            if nic.find("mac") is not None
-            else None
-        )
+        return nic.find("mac").attrib["address"].lower() if nic.find("mac") is not None else None
 
     mac1 = _get_mac(nic1)
     mac2 = _get_mac(nic2)
@@ -3217,6 +3191,7 @@ def _normalize_cpusets(desc, data):
     tuning = data["cpu"].get("tuning", {})
     for child in ["cachetune", "memorytune"]:
         if tuning.get(child):
+            #  pylint: disable-next=use-dict-literal
             new_item = dict()
             for cpuset, value in tuning[child].items():
                 if child == "cachetune" and value.get("monitor"):
@@ -3236,14 +3211,10 @@ def _serial_or_concole_equal(old, new):
         return {
             "type": item.attrib["type"],
             "port": (
-                item.find("source").get("service")
-                if item.find("source") is not None
-                else None
+                item.find("source").get("service") if item.find("source") is not None else None
             ),
             "protocol": (
-                item.find("protocol").get("type")
-                if item.find("protocol") is not None
-                else None
+                item.find("protocol").get("type") if item.find("protocol") is not None else None
             ),
         }
 
@@ -3325,8 +3296,7 @@ def _correct_networks(conn, desc):
             matching_nets = [
                 net
                 for net in networks
-                if net.find("forward").get("mode") == "hostdev"
-                and addr & _get_pci_addresses(net)
+                if net.find("forward").get("mode") == "hostdev" and addr & _get_pci_addresses(net)
             ]
             if matching_nets:
                 # We need to store the XML before modifying it
@@ -3365,14 +3335,11 @@ def _update_live(domain, new_desc, mem, cpu, old_mem, old_cpu, to_skip, test):
     if mem:
         if isinstance(mem, dict):
             # setMemoryFlags takes memory amount in KiB
-            new_mem = (
-                int(_handle_unit(mem.get("current")) / 1024)
-                if "current" in mem
-                else None
-            )
+            new_mem = int(_handle_unit(mem.get("current")) / 1024) if "current" in mem else None
         elif isinstance(mem, int):
             new_mem = int(mem * 1024)
 
+        #  pylint: disable-next=possibly-used-before-assignment
         if not _almost_equal(old_mem, new_mem) and new_mem is not None:
             commands.append(
                 {
@@ -3412,9 +3379,7 @@ def _update_live(domain, new_desc, mem, cpu, old_mem, old_cpu, to_skip, test):
             removable_changes.append(updated_disk)
             source_node = updated_disk.find("source")
             new_source_node = new_disk.find("source")
-            source_file = (
-                new_source_node.get("file") if new_source_node is not None else None
-            )
+            source_file = new_source_node.get("file") if new_source_node is not None else None
 
             updated_disk.set("type", "file")
             # Detaching device
@@ -3423,9 +3388,7 @@ def _update_live(domain, new_desc, mem, cpu, old_mem, old_cpu, to_skip, test):
 
             # Attaching device
             if source_file:
-                ElementTree.SubElement(
-                    updated_disk, "source", attrib={"file": source_file}
-                )
+                ElementTree.SubElement(updated_disk, "source", attrib={"file": source_file})
 
     changes["disk"]["new"] = new_disks
 
@@ -3496,6 +3459,7 @@ def update(
     numatune=None,
     test=False,
     boot_dev=None,
+    #  pylint: disable-next=unused-argument
     hypervisor_features=None,
     clock=None,
     serials=None,
@@ -3810,9 +3774,7 @@ def update(
     old_cpu = int(desc.find("./vcpu").text)
 
     def _yesno_attribute(path, xpath, attr_name, ignored=None):
-        return xmlutil.attribute(
-            path, xpath, attr_name, ignored, lambda v: "yes" if v else "no"
-        )
+        return xmlutil.attribute(path, xpath, attr_name, ignored, lambda v: "yes" if v else "no")
 
     def _memory_parameter(path, xpath, attr_name=None, ignored=None):
         entry = {
@@ -3954,30 +3916,18 @@ def update(
         xmlutil.attribute("cpu:topology:threads", "cpu/topology", "threads"),
         xmlutil.attribute("cpu:cache:level", "cpu/cache", "level"),
         xmlutil.attribute("cpu:cache:mode", "cpu/cache", "mode"),
-        xmlutil.attribute(
-            "cpu:features:{id}", "cpu/feature[@name='$id']", "policy", ["name"]
-        ),
-        _yesno_attribute(
-            "cpu:vcpus:{id}:enabled", "vcpus/vcpu[@id='$id']", "enabled", ["id"]
-        ),
+        xmlutil.attribute("cpu:features:{id}", "cpu/feature[@name='$id']", "policy", ["name"]),
+        _yesno_attribute("cpu:vcpus:{id}:enabled", "vcpus/vcpu[@id='$id']", "enabled", ["id"]),
         _yesno_attribute(
             "cpu:vcpus:{id}:hotpluggable",
             "vcpus/vcpu[@id='$id']",
             "hotpluggable",
             ["id"],
         ),
-        xmlutil.int_attribute(
-            "cpu:vcpus:{id}:order", "vcpus/vcpu[@id='$id']", "order", ["id"]
-        ),
-        _cpuset_parameter(
-            "cpu:numa:{id}:cpus", "cpu/numa/cell[@id='$id']", "cpus", ["id"]
-        ),
-        _memory_parameter(
-            "cpu:numa:{id}:memory", "cpu/numa/cell[@id='$id']", "memory", ["id"]
-        ),
-        _yesno_attribute(
-            "cpu:numa:{id}:discard", "cpu/numa/cell[@id='$id']", "discard", ["id"]
-        ),
+        xmlutil.int_attribute("cpu:vcpus:{id}:order", "vcpus/vcpu[@id='$id']", "order", ["id"]),
+        _cpuset_parameter("cpu:numa:{id}:cpus", "cpu/numa/cell[@id='$id']", "cpus", ["id"]),
+        _memory_parameter("cpu:numa:{id}:memory", "cpu/numa/cell[@id='$id']", "memory", ["id"]),
+        _yesno_attribute("cpu:numa:{id}:discard", "cpu/numa/cell[@id='$id']", "discard", ["id"]),
         xmlutil.attribute(
             "cpu:numa:{id}:memAccess", "cpu/numa/cell[@id='$id']", "memAccess", ["id"]
         ),
@@ -4019,9 +3969,7 @@ def update(
         xmlutil.attribute(
             "cpu:tuning:vcpusched:{id}:priority", "cputune/vcpusched[$id]", "priority"
         ),
-        _cpuset_parameter(
-            "cpu:tuning:vcpusched:{id}:vcpus", "cputune/vcpusched[$id]", "vcpus"
-        ),
+        _cpuset_parameter("cpu:tuning:vcpusched:{id}:vcpus", "cputune/vcpusched[$id]", "vcpus"),
         xmlutil.attribute(
             "cpu:tuning:iothreadsched:{id}:scheduler",
             "cputune/iothreadsched[$id]",
@@ -4044,9 +3992,7 @@ def update(
             "scheduler",
             ["priority"],
         ),
-        xmlutil.attribute(
-            "cpu:tuning:emulatorsched:priority", "cputune/emulatorsched", "priority"
-        ),
+        xmlutil.attribute("cpu:tuning:emulatorsched:priority", "cputune/emulatorsched", "priority"),
         xmlutil.attribute(
             "cpu:tuning:cachetune:{id}:monitor:{sid}",
             "cputune/cachetune[@vcpus='$id']/monitor[@vcpus='$sid']",
@@ -4141,9 +4087,7 @@ def update(
             ),
         ]
 
-    need_update = (
-        salt.utils.xmlutil.change_xml(desc, data, params_mapping) or need_update
-    )
+    need_update = salt.utils.xmlutil.change_xml(desc, data, params_mapping) or need_update
 
     # Update the XML definition with the new disks and diff changes
     devices_node = desc.find("devices")
@@ -4161,6 +4105,7 @@ def update(
         "hostdev": _skip_update(["host_devices"]),
     }
     changes = _compute_device_changes(desc, new_desc, to_skip)
+    #  pylint: disable-next=consider-using-dict-items
     for dev_type in changes:
         if not to_skip[dev_type]:
             old = devices_node.findall(dev_type)
@@ -4496,9 +4441,7 @@ def _node_devices(conn):
         vendor_id = vendor_node.get("id").lower()
         product_node = root.find(".//product")
         product_id = product_node.get("id").lower()
-        infos.update(
-            {"name": dev.name(), "vendor_id": vendor_id, "product_id": product_id}
-        )
+        infos.update({"name": dev.name(), "vendor_id": vendor_id, "product_id": product_id})
 
         # Vendor or product display name may not be set
         if vendor_node.text:
@@ -4528,9 +4471,7 @@ def _node_devices(conn):
                 infos["virtual functions"] = vf_addresses
 
             # Get the Physical Function if any
-            pf = root.find(
-                "./capability[@type='pci']/capability[@type='phys_function']/address"
-            )
+            pf = root.find("./capability[@type='pci']/capability[@type='phys_function']/address")
             if pf is not None:
                 infos["physical function"] = _format_pci_address(pf)
         elif "usb_device" in dev.listCaps():
@@ -4544,10 +4485,7 @@ def _node_devices(conn):
             "0x0002",
             "0x0003",
         ]
-        if (
-            root.find(".//capability[@type='pci-bridge']") is None
-            and not linux_usb_host
-        ):
+        if root.find(".//capability[@type='pci-bridge']") is None and not linux_usb_host:
             devices_infos.append(infos)
 
     return devices_infos
@@ -4560,6 +4498,12 @@ def node_devices(**kwargs):
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.node_devices
 
     .. versionadded:: 3003
     """
@@ -4925,9 +4869,7 @@ def get_xml(vm_, **kwargs):
     """
     conn = __get_conn(**kwargs)
     xml_desc = (
-        vm_.XMLDesc(0)
-        if isinstance(vm_, libvirt.virDomain)
-        else _get_domain(conn, vm_).XMLDesc(0)
+        vm_.XMLDesc(0) if isinstance(vm_, libvirt.virDomain) else _get_domain(conn, vm_).XMLDesc(0)
     )
     conn.close()
     return xml_desc
@@ -4965,11 +4907,7 @@ def get_profiles(hypervisor=None, **kwargs):
     conn = __get_conn(**kwargs)
     caps = _capabilities(conn)
     hypervisors = sorted(
-        {
-            x
-            for y in [guest["arch"]["domains"].keys() for guest in caps["guests"]]
-            for x in y
-        }
+        {x for y in [guest["arch"]["domains"].keys() for guest in caps["guests"]] for x in y}
     )
     if len(hypervisors) == 0:
         raise SaltInvocationError("No supported hypervisors were found")
@@ -5267,9 +5205,7 @@ def create_xml_path(path, **kwargs):
     """
     try:
         with salt.utils.files.fopen(path, "r") as fp_:
-            return create_xml_str(
-                salt.utils.stringutils.to_unicode(fp_.read()), **kwargs
-            )
+            return create_xml_str(salt.utils.stringutils.to_unicode(fp_.read()), **kwargs)
     except OSError:
         return False
 
@@ -5325,9 +5261,7 @@ def define_xml_path(path, **kwargs):
     """
     try:
         with salt.utils.files.fopen(path, "r") as fp_:
-            return define_xml_str(
-                salt.utils.stringutils.to_unicode(fp_.read()), **kwargs
-            )
+            return define_xml_str(salt.utils.stringutils.to_unicode(fp_.read()), **kwargs)
     except OSError:
         return False
 
@@ -5337,17 +5271,13 @@ def _define_vol_xml_str(conn, xml, pool=None):  # pylint: disable=redefined-oute
     Same function than define_vml_xml_str but using an already opened libvirt connection
     """
     default_pool = "default" if conn.getType() != "ESX" else "0"
-    poolname = (
-        pool if pool else __salt__["config.get"]("virt:storagepool", default_pool)
-    )
+    poolname = pool if pool else __salt__["config.get"]("virt:storagepool", default_pool)
     pool = conn.storagePoolLookupByName(str(poolname))
     ret = pool.createXML(xml, 0) is not None
     return ret
 
 
-def define_vol_xml_str(
-    xml, pool=None, **kwargs
-):  # pylint: disable=redefined-outer-name
+def define_vol_xml_str(xml, pool=None, **kwargs):  # pylint: disable=redefined-outer-name
     """
     Define a volume based on the XML passed to the function
 
@@ -5386,6 +5316,7 @@ def define_vol_xml_str(
     try:
         ret = _define_vol_xml_str(conn, xml, pool=pool)
     except libvirtError as err:
+        #  pylint: disable-next=raise-missing-from
         raise CommandExecutionError(err.get_error_message())
     finally:
         conn.close()
@@ -5486,7 +5417,7 @@ def migrate(vm_, target, **kwargs):
             tunnel: True
 
     For more details on tunnelled data migrations, report to
-    https://libvirt.org/migration.html#transporttunnel
+    https://libvirt.org/migration.html
     """
 
     conn = __get_conn()
@@ -5521,6 +5452,7 @@ def migrate_start_postcopy(vm_):
         dom.migrateStartPostCopy()
     except libvirt.libvirtError as err:
         conn.close()
+        #  pylint: disable-next=raise-missing-from
         raise CommandExecutionError(err.get_error_message())
     conn.close()
 
@@ -5548,6 +5480,7 @@ def seed_non_shared_migrate(disks, force=False):
         if os.path.isfile(fn_) and not force:
             # the target exists, check to see if it is compatible
             pre = salt.utils.yaml.safe_load(
+                #  pylint: disable-next=consider-using-with
                 subprocess.Popen(
                     ["qemu-img", "info", "arch"], stdout=subprocess.PIPE
                 ).communicate()[0]
@@ -5670,12 +5603,10 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
     conn = __get_conn(**kwargs)
     dom = _get_domain(conn, vm_)
     disks = _get_disks(conn, dom)
-    if (
-        VIRT_STATE_NAME_MAP.get(dom.info()[0], "unknown") != "shutdown"
-        and dom.destroy() != 0
-    ):
+    if VIRT_STATE_NAME_MAP.get(dom.info()[0], "unknown") != "shutdown" and dom.destroy() != 0:
         return False
     directories = set()
+    #  pylint: disable-next=consider-using-dict-items
     for disk in disks:
         if not removables and disks[disk]["type"] in ["cdrom", "floppy"]:
             continue
@@ -5781,9 +5712,7 @@ def get_hypervisor():
     # add 'foo' to the list below and add it to the docstring with a .. versionadded::
     hypervisors = ["kvm", "xen", "bhyve"]
     result = [
-        hyper
-        for hyper in hypervisors
-        if getattr(sys.modules[__name__], f"_is_{hyper}_hyper")()
+        hyper for hyper in hypervisors if getattr(sys.modules[__name__], f"_is_{hyper}_hyper")()
     ]
     return result[0] if result else None
 
@@ -5791,6 +5720,7 @@ def get_hypervisor():
 def _is_bhyve_hyper():
     vmm_enabled = False
     try:
+        #  pylint: disable-next=consider-using-with
         stdout = subprocess.Popen(
             ["sysctl", "hw.vmm.create"], stdout=subprocess.PIPE
         ).communicate()[0]
@@ -6045,6 +5975,7 @@ def _parse_snapshot_description(vm_snapshot, unix_time=False):
     :param xmldoc:
     :return:
     """
+    #  pylint: disable-next=use-dict-literal
     ret = dict()
     tree = ElementTree.fromstring(vm_snapshot.getXMLDesc())
     for node in tree:
@@ -6088,8 +6019,10 @@ def list_snapshots(domain=None, **kwargs):
         salt '*' virt.list_snapshots
         salt '*' virt.list_snapshots <domain>
     """
+    #  pylint: disable-next=use-dict-literal
     ret = dict()
     conn = __get_conn(**kwargs)
+    #  pylint: disable-next=use-list-literal
     for vm_domain in _get_domain(conn, *(domain and [domain] or list()), iterable=True):
         ret[vm_domain.name()] = [
             _parse_snapshot_description(snap) for snap in vm_domain.listAllSnapshots()
@@ -6177,6 +6110,7 @@ def delete_snapshots(name, *names, **kwargs):
         salt '*' virt.delete_snapshots <domain> <snapshot>
         salt '*' virt.delete_snapshots <domain> <snapshot1> <snapshot2> ...
     """
+    #  pylint: disable-next=use-dict-literal
     deleted = dict()
     conn = __get_conn(**kwargs)
     domain = _get_domain(conn, name)
@@ -6187,8 +6121,7 @@ def delete_snapshots(name, *names, **kwargs):
     conn.close()
 
     available = {
-        name: [_parse_snapshot_description(snap) for snap in domain.listAllSnapshots()]
-        or "N/A"
+        name: [_parse_snapshot_description(snap) for snap in domain.listAllSnapshots()] or "N/A"
     }
 
     return {"available": available, "deleted": deleted}
@@ -6220,11 +6153,13 @@ def revert_snapshot(name, vm_snapshot=None, cleanup=False, **kwargs):
         salt '*' virt.revert <domain>
         salt '*' virt.revert <domain> <snapshot>
     """
+    #  pylint: disable-next=use-dict-literal
     ret = dict()
     conn = __get_conn(**kwargs)
     domain = _get_domain(conn, name)
     snapshots = domain.listAllSnapshots()
 
+    #  pylint: disable-next=use-list-literal
     _snapshots = list()
     for snap_obj in snapshots:
         _snapshots.append(
@@ -6234,19 +6169,17 @@ def revert_snapshot(name, vm_snapshot=None, cleanup=False, **kwargs):
             }
         )
     snapshots = [
-        w_ptr["ptr"]
-        for w_ptr in sorted(_snapshots, key=lambda item: item["idx"], reverse=True)
+        w_ptr["ptr"] for w_ptr in sorted(_snapshots, key=lambda item: item["idx"], reverse=True)
     ]
     del _snapshots
 
+    #  pylint: disable-next=no-else-raise
     if not snapshots:
         conn.close()
         raise CommandExecutionError("No snapshots found")
     elif len(snapshots) == 1:
         conn.close()
-        raise CommandExecutionError(
-            "Cannot revert to itself: only one snapshot is available."
-        )
+        raise CommandExecutionError("Cannot revert to itself: only one snapshot is available.")
 
     snap = None
     for p_snap in snapshots:
@@ -6258,6 +6191,7 @@ def revert_snapshot(name, vm_snapshot=None, cleanup=False, **kwargs):
             snap = p_snap
             break
 
+    #  pylint: disable-next=no-else-raise
     if not snap:
         conn.close()
         raise CommandExecutionError(
@@ -6273,6 +6207,7 @@ def revert_snapshot(name, vm_snapshot=None, cleanup=False, **kwargs):
     ret["reverted"] = snap.getName()
 
     if cleanup:
+        #  pylint: disable-next=use-list-literal
         delete = list()
         for p_snap in snapshots:
             if p_snap.getName() != snap.getName():
@@ -6449,22 +6384,10 @@ def _parse_caps_host(host):
 
         elif child.tag == "cpu":
             cpu = {
-                "arch": (
-                    child.find("arch").text if child.find("arch") is not None else None
-                ),
-                "model": (
-                    child.find("model").text
-                    if child.find("model") is not None
-                    else None
-                ),
-                "vendor": (
-                    child.find("vendor").text
-                    if child.find("vendor") is not None
-                    else None
-                ),
-                "features": [
-                    feature.get("name") for feature in child.findall("feature")
-                ],
+                "arch": (child.find("arch").text if child.find("arch") is not None else None),
+                "model": (child.find("model").text if child.find("model") is not None else None),
+                "vendor": (child.find("vendor").text if child.find("vendor") is not None else None),
+                "features": [feature.get("name") for feature in child.findall("feature")],
                 "pages": [
                     {"size": "{} {}".format(page.get("size"), page.get("unit", "KiB"))}
                     for page in child.findall("pages")
@@ -6488,33 +6411,21 @@ def _parse_caps_host(host):
         elif child.tag == "migration_features":
             result["migration"] = {
                 "live": child.find("live") is not None,
-                "transports": [
-                    node.text for node in child.findall("uri_transports/uri_transport")
-                ],
+                "transports": [node.text for node in child.findall("uri_transports/uri_transport")],
             }
 
         elif child.tag == "topology":
             result["topology"] = {
-                "cells": [
-                    _parse_caps_cell(cell) for cell in child.findall("cells/cell")
-                ]
+                "cells": [_parse_caps_cell(cell) for cell in child.findall("cells/cell")]
             }
 
         elif child.tag == "cache":
-            result["cache"] = {
-                "banks": [_parse_caps_bank(bank) for bank in child.findall("bank")]
-            }
+            result["cache"] = {"banks": [_parse_caps_bank(bank) for bank in child.findall("bank")]}
 
     result["security"] = [
         {
-            "model": (
-                secmodel.find("model").text
-                if secmodel.find("model") is not None
-                else None
-            ),
-            "doi": (
-                secmodel.find("doi").text if secmodel.find("doi") is not None else None
-            ),
+            "model": (secmodel.find("model").text if secmodel.find("model") is not None else None),
+            "doi": (secmodel.find("doi").text if secmodel.find("doi") is not None else None),
             "baselabels": [
                 {"type": label.get("type"), "label": label.text}
                 for label in secmodel.findall("baselabel")
@@ -6560,6 +6471,7 @@ def capabilities(**kwargs):
     try:
         caps = _capabilities(conn)
     except libvirt.libvirtError as err:
+        #  pylint: disable-next=raise-missing-from
         raise CommandExecutionError(str(err))
     finally:
         conn.close()
@@ -6601,15 +6513,12 @@ def _parse_caps_cpu(node):
                     model["fallback"] = fallback
                 host_model["model"] = model
 
-            vendor = (
-                mode.find("vendor").text if mode.find("vendor") is not None else None
-            )
+            vendor = mode.find("vendor").text if mode.find("vendor") is not None else None
             if vendor:
                 host_model["vendor"] = vendor
 
             features = {
-                feature.get("name"): feature.get("policy")
-                for feature in mode.findall("feature")
+                feature.get("name"): feature.get("policy") for feature in mode.findall("feature")
             }
             if features:
                 host_model["features"] = features
@@ -6618,9 +6527,7 @@ def _parse_caps_cpu(node):
 
         elif name == "custom":
             custom_model = {}
-            models = {
-                model.text: model.get("usable") for model in mode.findall("model")
-            }
+            models = {model.text: model.get("usable") for model in mode.findall("model")}
             if models:
                 custom_model["models"] = models
             result[name] = custom_model
@@ -6662,9 +6569,7 @@ def _parse_domain_caps(caps):
     result = {
         "emulator": caps.find("path").text if caps.find("path") is not None else None,
         "domain": caps.find("domain").text if caps.find("domain") is not None else None,
-        "machine": (
-            caps.find("machine").text if caps.find("machine") is not None else None
-        ),
+        "machine": (caps.find("machine").text if caps.find("machine") is not None else None),
         "arch": caps.find("arch").text if caps.find("arch") is not None else None,
     }
 
@@ -6768,23 +6673,17 @@ def all_capabilities(**kwargs):
                 )
                 for key in guest.get("arch", {}).get("domains", {}).keys()
             ]
-            for guest in [
-                _parse_caps_guest(guest) for guest in host_caps.findall("guest")
-            ]
+            for guest in [_parse_caps_guest(guest) for guest in host_caps.findall("guest")]
         ]
         flattened = [pair for item in (x for x in domains) for pair in item]
         result = {
             "host": {
                 "host": _parse_caps_host(host_caps.find("host")),
-                "guests": [
-                    _parse_caps_guest(guest) for guest in host_caps.findall("guest")
-                ],
+                "guests": [_parse_caps_guest(guest) for guest in host_caps.findall("guest")],
             },
             "domains": [
                 _parse_domain_caps(
-                    ElementTree.fromstring(
-                        conn.getDomainCapabilities(emulator, arch, None, domain)
-                    )
+                    ElementTree.fromstring(conn.getDomainCapabilities(emulator, arch, None, domain))
                 )
                 for (arch, domain, emulator) in flattened
             ],
@@ -6852,11 +6751,10 @@ def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
         while cpu_model:
             cpu_map_models = cpu_map.findall("arch/model")
             cpu_specs = [
-                el
-                for el in cpu_map_models
-                if el.get("name") == cpu_model and bool(len(el))
+                el for el in cpu_map_models if el.get("name") == cpu_model and bool(len(el))
             ]
 
+            #  pylint: disable-next=no-else-raise
             if not cpu_specs:
                 raise ValueError(f"Model {cpu_model} not found in CPU map")
             elif len(cpu_specs) > 1:
@@ -6872,6 +6770,7 @@ def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
             else:
                 cpu_model = model_node.get("name")
 
+            #  pylint: disable-next=unnecessary-comprehension
             cpu.extend([feature for feature in cpu_specs.findall("feature")])
 
     if out == "salt":
@@ -7334,6 +7233,12 @@ def network_update(
                   priority: 1
                   weight: 10
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.network_update network bridge None mtu=1500
+
     .. versionadded:: 3003
     """
     # Get the current definition to compare the two
@@ -7392,9 +7297,7 @@ def network_update(
             # If the bridge name starts with virbr in a nat, route, open or isolated network
             # there is a good change it has been autogenerated...
             old_forward = (
-                old_xml.find("forward").get("mode")
-                if old_xml.find("forward") is not None
-                else None
+                old_xml.find("forward").get("mode") if old_xml.find("forward") is not None else None
             )
             if (
                 old_forward == forward
@@ -7406,9 +7309,7 @@ def network_update(
 
         # In the ipv4 address, we need to convert netmask to prefix in the old XML
         ipv4_nodes = [
-            node
-            for node in old_xml.findall("ip")
-            if node.get("family", "ipv4") == "ipv4"
+            node for node in old_xml.findall("ip") if node.get("family", "ipv4") == "ipv4"
         ]
         for ip_node in ipv4_nodes:
             netmask = ip_node.attrib.pop("netmask", None)
@@ -7501,14 +7402,13 @@ def network_info(name=None, **kwargs):
         """
         try:
             return net.bridgeName()
+        #  pylint: disable-next=unused-variable
         except libvirt.libvirtError as err:
             # Some network configurations have no bridge
             return None
 
     try:
-        nets = [
-            net for net in conn.listAllNetworks() if name is None or net.name() == name
-        ]
+        nets = [net for net in conn.listAllNetworks() if name is None or net.name() == name]
         result = {
             net.name(): {
                 "uuid": net.UUIDString(),
@@ -7814,9 +7714,7 @@ def _pool_capabilities(conn):
         def _get_backend_output(backend):
             output = {
                 "name": backend["name"],
-                "supported": (
-                    not backend.get("version") or libvirt_version >= backend["version"]
-                )
+                "supported": (not backend.get("version") or libvirt_version >= backend["version"])
                 and hypervisor in backend.get("hypervisors", all_hypervisors),
                 "options": {
                     "pool": {
@@ -7833,9 +7731,7 @@ def _pool_capabilities(conn):
             # Cleanup the empty members to match the libvirt output
             for option_kind in ["pool", "volume"]:
                 if not [
-                    value
-                    for value in output["options"][option_kind].values()
-                    if value is not None
+                    value for value in output["options"][option_kind].values() if value is not None
                 ]:
                     del output["options"][option_kind]
             if not output["options"]:
@@ -7913,7 +7809,7 @@ def pool_define(
         Each item in the list is a dictionary with ``path`` and optionally ``part_separator``
         keys. The path is the qualified name for iSCSI devices.
 
-        Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
+        Report to `this libvirt page <https://libvirt.org/formatstorage.html>`_
         for more information on the use of ``part_separator``
     :param source_dir:
         Path to the source directory for pools of type ``dir``, ``netfs`` or ``gluster``.
@@ -7930,7 +7826,7 @@ def pool_define(
         The ``parent_address`` value is a dictionary with ``unique_id`` and ``address`` keys.
         The address represents a PCI address and is itself a dictionary with ``domain``, ``bus``,
         ``slot`` and ``function`` properties.
-        Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
+        Report to `this libvirt page <https://libvirt.org/formatstorage.html>`_
         for the meaning and possible values of these properties.
     :param source_hosts:
         List of source for pools backed by storage from remote servers. Each item is the hostname
@@ -7948,24 +7844,18 @@ def pool_define(
 
         .. code-block:: python
 
-            source_auth={
-                'type': 'ceph',
-                'username': 'admin',
-                'secret': {
-                    'type': 'uuid',
-                    'value': '2ec115d7-3a88-3ceb-bc12-0ac909a6fd87'
-                }
+            source_auth = {
+                "type": "ceph",
+                "username": "admin",
+                "secret": {"type": "uuid", "value": "2ec115d7-3a88-3ceb-bc12-0ac909a6fd87"},
             }
 
         .. code-block:: python
 
-            source_auth={
-                'type': 'chap',
-                'username': 'myname',
-                'secret': {
-                    'type': 'usage',
-                    'value': 'mycluster_myname'
-                }
+            source_auth = {
+                "type": "chap",
+                "username": "myname",
+                "secret": {"type": "usage", "value": "mycluster_myname"},
             }
 
         Since 3000, instead the source authentication can only contain ``username``
@@ -8056,9 +7946,7 @@ def pool_define(
     return True
 
 
-def _pool_set_secret(
-    conn, pool_type, pool_name, source_auth, uuid=None, usage=None, test=False
-):
+def _pool_set_secret(conn, pool_type, pool_name, source_auth, uuid=None, usage=None, test=False):
     secret_types = {"rbd": "ceph", "iscsi": "chap", "iscsi-direct": "chap"}
     secret_type = secret_types.get(pool_type)
     auth = source_auth
@@ -8140,7 +8028,7 @@ def pool_update(
         Each item in the list is a dictionary with ``path`` and optionally ``part_separator``
         keys. The path is the qualified name for iSCSI devices.
 
-        Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
+        Report to `this libvirt page <https://libvirt.org/formatstorage.html>`_
         for more information on the use of ``part_separator``
     :param source_dir:
         Path to the source directory for pools of type ``dir``, ``netfs`` or ``gluster``.
@@ -8157,7 +8045,7 @@ def pool_update(
         The ``parent_address`` value is a dictionary with ``unique_id`` and ``address`` keys.
         The address represents a PCI address and is itself a dictionary with ``domain``, ``bus``,
         ``slot`` and ``function`` properties.
-        Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
+        Report to `this libvirt page <https://libvirt.org/formatstorage.html>`_
         for the meaning and possible values of these properties.
     :param source_hosts:
         List of source for pools backed by storage from remote servers. Each item is the hostname
@@ -8175,24 +8063,18 @@ def pool_update(
 
         .. code-block:: python
 
-            source_auth={
-                'type': 'ceph',
-                'username': 'admin',
-                'secret': {
-                    'type': 'uuid',
-                    'uuid': '2ec115d7-3a88-3ceb-bc12-0ac909a6fd87'
-                }
+            source_auth = {
+                "type": "ceph",
+                "username": "admin",
+                "secret": {"type": "uuid", "uuid": "2ec115d7-3a88-3ceb-bc12-0ac909a6fd87"},
             }
 
         .. code-block:: python
 
-            source_auth={
-                'type': 'chap',
-                'username': 'myname',
-                'secret': {
-                    'type': 'usage',
-                    'uuid': 'mycluster_myname'
-                }
+            source_auth = {
+                "type": "chap",
+                "username": "myname",
+                "secret": {"type": "usage", "uuid": "mycluster_myname"},
             }
 
         Since 3000, instead the source authentication can only contain ``username``
@@ -8210,7 +8092,7 @@ def pool_update(
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. rubric:: Example:
+    .. rubric:: CLI Example:
 
     Local folder pool:
 
@@ -8240,9 +8122,7 @@ def pool_update(
         secret_node = old_xml.find("source/auth/secret")
         usage = secret_node.get("usage") if secret_node is not None else None
         uuid = secret_node.get("uuid") if secret_node is not None else None
-        auth = _pool_set_secret(
-            conn, ptype, name, source_auth, uuid=uuid, usage=usage, test=test
-        )
+        auth = _pool_set_secret(conn, ptype, name, source_auth, uuid=uuid, usage=usage, test=test)
 
         # Compute new definition
         new_xml = ElementTree.fromstring(
@@ -8349,11 +8229,7 @@ def pool_info(name=None, **kwargs):
         }
 
     try:
-        pools = [
-            pool
-            for pool in conn.listAllStoragePools()
-            if name is None or pool.name() == name
-        ]
+        pools = [pool for pool in conn.listAllStoragePools() if name is None or pool.name() == name]
         result = {pool.name(): _pool_extract_infos(pool) for pool in pools}
     except libvirt.libvirtError as err:
         log.debug("Silenced libvirt error: %s", err)
@@ -8634,6 +8510,7 @@ def _is_valid_volume(vol):
         # Reenable the libvirt error logging
         libvirt.registerErrorHandler(None, None)
         return True
+    #  pylint: disable-next=unused-variable
     except libvirt.libvirtError as err:
         return False
 
@@ -8885,6 +8762,7 @@ def volume_define(
         )
         ret = _define_vol_xml_str(conn, xml, pool=pool)
     except libvirt.libvirtError as err:
+        #  pylint: disable-next=raise-missing-from
         raise CommandExecutionError(err.get_error_message())
     finally:
         conn.close()
@@ -8897,9 +8775,11 @@ def _volume_upload(conn, pool, volume, file, offset=0, length=0, sparse=False):
     opened libvirt connection.
     """
 
+    #  pylint: disable-next=unused-argument
     def handler(stream, nbytes, opaque):
         return os.read(opaque, nbytes)
 
+    #  pylint: disable-next=invalid-name,unused-argument
     def holeHandler(stream, opaque):
         """
         Taken from the sparsestream.py libvirt-python example.
@@ -8910,34 +8790,43 @@ def _volume_upload(conn, pool, volume, file, offset=0, length=0, sparse=False):
         try:
             data = os.lseek(fd, cur, os.SEEK_DATA)
         except OSError as e:
+            #  pylint: disable-next=no-else-raise
             if e.errno != 6:
                 raise e
             else:
                 data = -1
         if data < 0:
+            #  pylint: disable-next=invalid-name
             inData = False
             eof = os.lseek(fd, 0, os.SEEK_END)
             if eof < cur:
                 raise RuntimeError(f"Current position in file after EOF: {cur}")
+            #  pylint: disable-next=invalid-name
             sectionLen = eof - cur
         else:
             if data > cur:
+                #  pylint: disable-next=invalid-name
                 inData = False
+                #  pylint: disable-next=invalid-name
                 sectionLen = data - cur
             else:
+                #  pylint: disable-next=invalid-name
                 inData = True
 
                 hole = os.lseek(fd, data, os.SEEK_HOLE)
                 if hole < 0:
                     raise RuntimeError("No trailing hole")
 
+                #  pylint: disable-next=no-else-raise
                 if hole == data:
                     raise RuntimeError("Impossible happened")
                 else:
+                    #  pylint: disable-next=invalid-name
                     sectionLen = hole - data
         os.lseek(fd, cur, os.SEEK_SET)
         return [inData, sectionLen]
 
+    #  pylint: disable-next=invalid-name,unused-argument
     def skipHandler(stream, length, opaque):
         return os.lseek(opaque, length, os.SEEK_CUR)
 
@@ -8962,6 +8851,7 @@ def _volume_upload(conn, pool, volume, file, offset=0, length=0, sparse=False):
             stream.sendAll(handler, fd)
         ret = True
     except libvirt.libvirtError as err:
+        #  pylint: disable-next=raise-missing-from
         raise CommandExecutionError(err.get_error_message())
     finally:
         if fd:
@@ -8971,12 +8861,14 @@ def _volume_upload(conn, pool, volume, file, offset=0, length=0, sparse=False):
                 if stream:
                     stream.abort()
                 if ret:
+                    #  pylint: disable-next=raise-missing-from
                     raise CommandExecutionError(f"Failed to close file: {err.strerror}")
         if stream:
             try:
                 stream.finish()
             except libvirt.libvirtError as err:
                 if ret:
+                    #  pylint: disable-next=raise-missing-from
                     raise CommandExecutionError(
                         f"Failed to finish stream: {err.get_error_message()}"
                     )
@@ -9009,9 +8901,7 @@ def volume_upload(pool, volume, file, offset=0, length=0, sparse=False, **kwargs
 
     ret = False
     try:
-        ret = _volume_upload(
-            conn, pool, volume, file, offset=offset, length=length, sparse=sparse
-        )
+        ret = _volume_upload(conn, pool, volume, file, offset=offset, length=length, sparse=sparse)
     finally:
         conn.close()
     return ret

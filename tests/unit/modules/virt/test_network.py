@@ -2,16 +2,24 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-import salt.modules.virt as virt
+#  pylint: disable-next=consider-using-from-import
 import salt.utils.xmlutil as xmlutil
 
+#  pylint: disable-next=consider-using-from-import
+import saltext.virt.modules.virt as virt
+
 from .conftest import loader_modules_config
-from .test_helpers import assert_called, assert_xml_equals, strip_xml
+from .test_helpers import assert_called
+from .test_helpers import assert_xml_equals
+from .test_helpers import strip_xml
 
 
 @pytest.fixture
 def configure_loader_modules():
     return loader_modules_config()
+
+
+setattr(configure_loader_modules, "_pytestfixturefunction", True)
 
 
 def test_gen_xml():
@@ -231,9 +239,7 @@ def test_gen_xml_hostdev_pf():
     """
     Test the virt._gen_net_xml() function for a hostdev forward mode with physical function
     """
-    xml_data = virt._gen_net_xml(
-        "network", "virbr0", "hostdev", None, physical_function="eth0"
-    )
+    xml_data = virt._gen_net_xml("network", "virbr0", "hostdev", None, physical_function="eth0")
     root = ET.fromstring(xml_data)
     expected_forward = strip_xml(
         """
@@ -334,6 +340,7 @@ def test_update_nat_nochange(make_mock_network):
     """
     Test updating a NAT network without changes
     """
+    #  pylint: disable-next=unused-variable
     net_mock = make_mock_network(
         """
         <network>
@@ -384,6 +391,7 @@ def test_update_nat_change(make_mock_network, test, netmask):
     """
     Test updating a NAT network with changes
     """
+    #  pylint: disable-next=unused-variable
     net_mock = make_mock_network(
         """
         <network>
@@ -442,6 +450,7 @@ def test_update_hostdev_pf(make_mock_network, change):
     """
     Test updating a hostdev network without changes
     """
+    #  pylint: disable-next=unused-variable
     net_mock = make_mock_network(
         """
         <network connections='1'>

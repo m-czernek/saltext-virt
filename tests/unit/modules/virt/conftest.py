@@ -1,10 +1,13 @@
 import xml.etree.ElementTree as ET
+from unittest.mock import MagicMock
 
 import pytest
 
+#  pylint: disable-next=consider-using-from-import
 import salt.modules.config as config
-import salt.modules.virt as virt
-from tests.support.mock import MagicMock
+
+#  pylint: disable-next=consider-using-from-import
+import saltext.virt.modules.virt as virt
 
 
 class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
@@ -12,11 +15,13 @@ class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
     Libvirt library mock
     """
 
+    #  pylint: disable-next=invalid-name
     class virDomain(MagicMock):
         """
         virDomain mock
         """
 
+    #  pylint: disable-next=invalid-name
     class libvirtError(Exception):
         """
         libvirtError mock
@@ -38,6 +43,7 @@ class MappedResultMock(MagicMock):
     _instances = {}
 
     def __init__(self):
+        #  pylint: disable-next=unused-argument
         def mapped_results(*args, **kwargs):
             if args[0] not in self._instances:
                 raise virt.libvirt.libvirtError(f"Not found: {args[0]}")
@@ -101,9 +107,7 @@ def make_mock_vm():
 
         domain_mock.XMLDesc = MappedResultMock()
         domain_mock.XMLDesc.add(0, desc)
-        domain_mock.XMLDesc.add(
-            virt.libvirt.VIR_DOMAIN_XML_INACTIVE, inactive_def or desc
-        )
+        domain_mock.XMLDesc.add(virt.libvirt.VIR_DOMAIN_XML_INACTIVE, inactive_def or desc)
         domain_mock.OSType.return_value = os_type
 
         # Return state as shutdown
@@ -148,6 +152,7 @@ def make_mock_storage_pool():
         # Configure the pool
         mocked_conn.storagePoolLookupByName.add(name)
         mocked_pool = mocked_conn.storagePoolLookupByName(name)
+        #  pylint: disable-next=unused-variable
         source_def = source
         if not source and type == "disk":
             source = f"<device path='/dev/{name}'/>"

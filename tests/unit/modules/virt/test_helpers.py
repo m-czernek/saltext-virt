@@ -1,8 +1,10 @@
 import xml.etree.ElementTree as ET
 
+#  pylint: disable-next=consider-using-from-import
 import salt.utils.xmlutil as xmlutil
 
 
+#  pylint: disable-next=invalid-name
 def append_to_XMLDesc(mocked, fragment):
     """
     Append an XML fragment at the end of the mocked XMLDesc return_value of mocked.
