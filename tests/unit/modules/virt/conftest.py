@@ -1,10 +1,10 @@
 import xml.etree.ElementTree as ET
+from unittest.mock import MagicMock
 
 import pytest
-
 import salt.modules.config as config
-import salt.modules.virt as virt
-from tests.support.mock import MagicMock
+
+import saltext.virt.modules.virt as virt
 
 
 class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
@@ -101,9 +101,7 @@ def make_mock_vm():
 
         domain_mock.XMLDesc = MappedResultMock()
         domain_mock.XMLDesc.add(0, desc)
-        domain_mock.XMLDesc.add(
-            virt.libvirt.VIR_DOMAIN_XML_INACTIVE, inactive_def or desc
-        )
+        domain_mock.XMLDesc.add(virt.libvirt.VIR_DOMAIN_XML_INACTIVE, inactive_def or desc)
         domain_mock.OSType.return_value = os_type
 
         # Return state as shutdown

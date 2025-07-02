@@ -1,6 +1,6 @@
-import pytest
+from unittest.mock import MagicMock
 
-from tests.support.mock import MagicMock
+import pytest
 
 
 class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors

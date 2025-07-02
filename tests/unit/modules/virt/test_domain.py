@@ -1,21 +1,29 @@
 import os.path
 import xml.etree.ElementTree as ET
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
-
-import salt.modules.virt as virt
 import salt.syspaths
 import salt.utils.xmlutil as xmlutil
-from salt.exceptions import CommandExecutionError, SaltInvocationError
-from tests.support.mock import MagicMock, patch
+from salt.exceptions import CommandExecutionError
+from salt.exceptions import SaltInvocationError
+
+import saltext.virt.modules.virt as virt
 
 from .conftest import loader_modules_config
-from .test_helpers import append_to_XMLDesc, assert_called, assert_equal_unit, strip_xml
+from .test_helpers import append_to_XMLDesc
+from .test_helpers import assert_called
+from .test_helpers import assert_equal_unit
+from .test_helpers import strip_xml
 
 
 @pytest.fixture
 def configure_loader_modules():
     return loader_modules_config()
+
+
+setattr(configure_loader_modules, "_pytestfixturefunction", True)
 
 
 @pytest.mark.parametrize(
@@ -30,13 +38,9 @@ def test_gen_xml_for_xen_default_profile(loader, minion_opts):
     """
     Test virt._gen_xml(), XEN PV default profile case
     """
-    diskp = virt._disk_profile(
-        virt.libvirt.openAuth.return_value, "default", "xen", [], "hello"
-    )
+    diskp = virt._disk_profile(virt.libvirt.openAuth.return_value, "default", "xen", [], "hello")
     nicp = virt._nic_profile("default", "xen")
-    with patch.dict(
-        virt.__grains__, {"os_family": "Suse"}  # pylint: disable=no-member
-    ):
+    with patch.dict(virt.__grains__, {"os_family": "Suse"}):  # pylint: disable=no-member
         os_mock = MagicMock(spec=virt.os)
 
         def fake_exists(path):
@@ -146,10 +150,7 @@ def test_update_xen_disk_volumes(make_mock_vm, make_mock_storage_pool):
 
     # Note that my_vm-file-data was not an existing volume before the update
     assert setxml.find(".//disk[4]").get("type") == "file"
-    assert (
-        setxml.find(".//disk[4]/source").get("file")
-        == "/path/to/default/my_vm_file-data"
-    )
+    assert setxml.find(".//disk[4]/source").get("file") == "/path/to/default/my_vm_file-data"
 
 
 def test_get_disks(make_mock_vm, make_mock_storage_pool):
@@ -804,9 +805,7 @@ def test_init_hostdev_usb(make_capabilities, make_mock_device):
                 </hostdev>
                 """
             )
-            assert (
-                strip_xml(ET.tostring(setxml.find("./devices/hostdev"))) == expected_xml
-            )
+            assert strip_xml(ET.tostring(setxml.find("./devices/hostdev"))) == expected_xml
 
 
 def test_init_hostdev_pci(make_capabilities, make_mock_device):
@@ -846,9 +845,7 @@ def test_init_hostdev_pci(make_capabilities, make_mock_device):
                 </hostdev>
                 """
             )
-            assert (
-                strip_xml(ET.tostring(setxml.find("./devices/hostdev"))) == expected_xml
-            )
+            assert strip_xml(ET.tostring(setxml.find("./devices/hostdev"))) == expected_xml
 
 
 def test_update_hostdev_nochange(make_mock_device, make_mock_vm):
@@ -1017,8 +1014,7 @@ def test_update_hostdev_changes(running, live, make_mock_device, make_mock_vm, t
     if not test:
         set_xml = ET.fromstring(define_mock.call_args[0][0])
         actual_hostdevs = [
-            ET.tostring(xmlutil.strip_spaces(node))
-            for node in set_xml.findall("./devices/hostdev")
+            ET.tostring(xmlutil.strip_spaces(node)) for node in set_xml.findall("./devices/hostdev")
         ]
         assert actual_hostdevs == [usb_device_xml]
 
@@ -1094,9 +1090,7 @@ def test_diff_nics():
     """
     ).findall("interface")
     ret = virt._diff_interface_lists(old_nics, new_nics)
-    assert [nic.find("mac").get("address") for nic in ret["unchanged"]] == [
-        "52:54:00:39:02:b1"
-    ]
+    assert [nic.find("mac").get("address") for nic in ret["unchanged"]] == ["52:54:00:39:02:b1"]
     assert [nic.find("mac").get("address") for nic in ret["new"]] == [
         "52:54:00:39:02:b2",
         "52:54:00:39:02:b4",
@@ -1366,61 +1360,19 @@ def test_update_add_cpu_topology(make_mock_vm):
     assert setxml.find("./cpu/numa/cell/[@id='0']").get("memory") == str(1024**3)
     assert setxml.find("./cpu/numa/cell/[@id='0']").get("unit") == "bytes"
     assert setxml.find("./cpu/numa/cell/[@id='0']").get("discard") == "yes"
-    assert (
-        setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='0']").get(
-            "value"
-        )
-        == "10"
-    )
-    assert (
-        setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='1']").get(
-            "value"
-        )
-        == "21"
-    )
-    assert (
-        setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='2']").get(
-            "value"
-        )
-        == "31"
-    )
-    assert (
-        setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='3']").get(
-            "value"
-        )
-        == "41"
-    )
+    assert setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='0']").get("value") == "10"
+    assert setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='1']").get("value") == "21"
+    assert setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='2']").get("value") == "31"
+    assert setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='3']").get("value") == "41"
     assert setxml.find("./cpu/numa/cell/[@id='1']").get("cpus") == "4,5,6"
-    assert setxml.find("./cpu/numa/cell/[@id='1']").get("memory") == str(
-        int(1024**3 / 2)
-    )
+    assert setxml.find("./cpu/numa/cell/[@id='1']").get("memory") == str(int(1024**3 / 2))
     assert setxml.find("./cpu/numa/cell/[@id='1']").get("unit") == "bytes"
     assert setxml.find("./cpu/numa/cell/[@id='1']").get("discard") == "no"
     assert setxml.find("./cpu/numa/cell/[@id='1']").get("memAccess") == "shared"
-    assert (
-        setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='0']").get(
-            "value"
-        )
-        == "21"
-    )
-    assert (
-        setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='1']").get(
-            "value"
-        )
-        == "10"
-    )
-    assert (
-        setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='2']").get(
-            "value"
-        )
-        == "15"
-    )
-    assert (
-        setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='3']").get(
-            "value"
-        )
-        == "30"
-    )
+    assert setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='0']").get("value") == "21"
+    assert setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='1']").get("value") == "10"
+    assert setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='2']").get("value") == "15"
+    assert setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='3']").get("value") == "30"
 
 
 @pytest.mark.parametrize("boot_dev", ["hd", "cdrom network hd"])
@@ -1473,10 +1425,7 @@ def test_update_boot_kernel_paths(make_mock_vm):
     setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
     assert setxml.find("os/kernel").text == "/root/f8-i386-vmlinuz"
     assert setxml.find("os/initrd").text == "/root/f8-i386-initrd"
-    assert (
-        setxml.find("os/cmdline").text
-        == "console=ttyS0 ks=http://example.com/f8-i386/os/"
-    )
+    assert setxml.find("os/cmdline").text == "console=ttyS0 ks=http://example.com/f8-i386/os/"
 
 
 def test_update_boot_uefi_paths(make_mock_vm):
@@ -1770,46 +1719,18 @@ def test_update_add_cputune(make_mock_vm):
     assert setxml.find("cputune/vcpusched[@vcpus='0']").get("scheduler") == "fifo"
     assert setxml.find("cputune/iothreadsched").get("iothreads") == "7"
     assert setxml.find("cputune/iothreadsched").get("scheduler") == "batch"
+    assert setxml.find("./cputune/cachetune[@vcpus='0,1,2,3']/cache[@id='0']").get("level") == "3"
+    assert setxml.find("./cputune/cachetune[@vcpus='0,1,2,3']/cache[@id='0']").get("type") == "both"
     assert (
-        setxml.find("./cputune/cachetune[@vcpus='0,1,2,3']/cache[@id='0']").get("level")
-        == "3"
+        setxml.find("./cputune/cachetune[@vcpus='0,1,2,3']/monitor[@vcpus='1']").get("level") == "3"
     )
+    assert setxml.find("./cputune/cachetune[@vcpus='4,5']/monitor[@vcpus='4']").get("level") == "3"
+    assert setxml.find("./cputune/cachetune[@vcpus='4,5']/monitor[@vcpus='5']").get("level") == "2"
     assert (
-        setxml.find("./cputune/cachetune[@vcpus='0,1,2,3']/cache[@id='0']").get("type")
-        == "both"
+        setxml.find("./cputune/memorytune[@vcpus='0,1,2']/node[@id='0']").get("bandwidth") == "60"
     )
-    assert (
-        setxml.find("./cputune/cachetune[@vcpus='0,1,2,3']/monitor[@vcpus='1']").get(
-            "level"
-        )
-        == "3"
-    )
-    assert (
-        setxml.find("./cputune/cachetune[@vcpus='4,5']/monitor[@vcpus='4']").get(
-            "level"
-        )
-        == "3"
-    )
-    assert (
-        setxml.find("./cputune/cachetune[@vcpus='4,5']/monitor[@vcpus='5']").get(
-            "level"
-        )
-        == "2"
-    )
-    assert (
-        setxml.find("./cputune/memorytune[@vcpus='0,1,2']/node[@id='0']").get(
-            "bandwidth"
-        )
-        == "60"
-    )
-    assert (
-        setxml.find("./cputune/memorytune[@vcpus='3,4']/node[@id='0']").get("bandwidth")
-        == "50"
-    )
-    assert (
-        setxml.find("./cputune/memorytune[@vcpus='3,4']/node[@id='1']").get("bandwidth")
-        == "70"
-    )
+    assert setxml.find("./cputune/memorytune[@vcpus='3,4']/node[@id='0']").get("bandwidth") == "50"
+    assert setxml.find("./cputune/memorytune[@vcpus='3,4']/node[@id='1']").get("bandwidth") == "70"
 
 
 def test_update_graphics(make_mock_vm):
@@ -1869,9 +1790,7 @@ def test_update_console(make_mock_vm):
         """
     )
 
-    assert virt.update(
-        "my_vm", serials=[{"type": "tcp"}], consoles=[{"type": "tcp"}]
-    ) == {
+    assert virt.update("my_vm", serials=[{"type": "tcp"}], consoles=[{"type": "tcp"}]) == {
         "definition": True,
         "disk": {"attached": [], "detached": [], "updated": []},
         "interface": {"attached": [], "detached": []},
@@ -1941,10 +1860,7 @@ def test_update_disks(make_mock_vm):
             added_disk_path = os.path.join(
                 virt.__salt__["config.get"]("virt:images"), "my_vm_added.qcow2"
             )
-            assert (
-                mock_run.call_args[0][0]
-                == f'qemu-img create -f qcow2 "{added_disk_path}" 2048M'
-            )
+            assert mock_run.call_args[0][0] == f'qemu-img create -f qcow2 "{added_disk_path}" 2048M'
             assert mock_chmod.call_args[0][0] == added_disk_path
             assert [
                 (
@@ -2093,12 +2009,10 @@ def test_update_nics(make_mock_vm):
             ],
         )
         assert [
-            ET.fromstring(nic).find("source").get("network")
-            for nic in ret["interface"]["attached"]
+            ET.fromstring(nic).find("source").get("network") for nic in ret["interface"]["attached"]
         ] == ["newnet"]
         assert [
-            ET.fromstring(nic).find("source").get("network")
-            for nic in ret["interface"]["detached"]
+            ET.fromstring(nic).find("source").get("network") for nic in ret["interface"]["detached"]
         ] == ["oldnet"]
         domain_mock.attachDevice.assert_called_once()
         domain_mock.detachDevice.assert_called_once()
@@ -2143,9 +2057,7 @@ def test_update_remove_disks_nics(make_mock_vm):
     )
     domain_mock = make_mock_vm(xml_def)
 
-    ret = virt.update(
-        "my_vm", nic_profile=None, interfaces=[], disk_profile=None, disks=[]
-    )
+    ret = virt.update("my_vm", nic_profile=None, interfaces=[], disk_profile=None, disks=[])
     assert ret["interface"].get("attached", []) == []
     assert len(ret["interface"]["detached"]) == 1
     assert ret["disk"].get("attached", []) == []
@@ -2274,9 +2186,7 @@ def test_update_failure(make_mock_vm):
     Test virt.update() with errors
     """
     domain_mock = make_mock_vm()
-    virt.libvirt.openAuth().defineXML.side_effect = virt.libvirt.libvirtError(
-        "Test error"
-    )
+    virt.libvirt.openAuth().defineXML.side_effect = virt.libvirt.libvirtError("Test error")
     with pytest.raises(virt.libvirt.libvirtError):
         virt.update("my_vm", mem=2048)
 
@@ -2320,10 +2230,7 @@ def test_gen_xml_spice_default(hypervisor):
     assert root.find("devices/graphics/listen").attrib["type"] == "address"
     assert root.find("devices/graphics/listen").attrib["address"] == "0.0.0.0"
     if hypervisor == "kvm":
-        assert (
-            root.find(".//channel[@type='spicevmc']/target").get("name")
-            == "com.redhat.spice.0"
-        )
+        assert root.find(".//channel[@type='spicevmc']/target").get("name") == "com.redhat.spice.0"
     else:
         assert root.find(".//channel[@type='spicevmc']") is None
 

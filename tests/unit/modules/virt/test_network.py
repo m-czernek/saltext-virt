@@ -1,17 +1,22 @@
 import xml.etree.ElementTree as ET
 
 import pytest
-
-import salt.modules.virt as virt
 import salt.utils.xmlutil as xmlutil
 
+import saltext.virt.modules.virt as virt
+
 from .conftest import loader_modules_config
-from .test_helpers import assert_called, assert_xml_equals, strip_xml
+from .test_helpers import assert_called
+from .test_helpers import assert_xml_equals
+from .test_helpers import strip_xml
 
 
 @pytest.fixture
 def configure_loader_modules():
     return loader_modules_config()
+
+
+setattr(configure_loader_modules, "_pytestfixturefunction", True)
 
 
 def test_gen_xml():
@@ -231,9 +236,7 @@ def test_gen_xml_hostdev_pf():
     """
     Test the virt._gen_net_xml() function for a hostdev forward mode with physical function
     """
-    xml_data = virt._gen_net_xml(
-        "network", "virbr0", "hostdev", None, physical_function="eth0"
-    )
+    xml_data = virt._gen_net_xml("network", "virbr0", "hostdev", None, physical_function="eth0")
     root = ET.fromstring(xml_data)
     expected_forward = strip_xml(
         """

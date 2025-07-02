@@ -1,4 +1,4 @@
-from tests.support.mock import call
+from unittest.mock import call
 
 
 def network_update_call(

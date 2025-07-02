@@ -1,15 +1,19 @@
 """
-    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
+:codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
+import os
 import shutil
 import tempfile
+from unittest.mock import MagicMock
+from unittest.mock import mock_open
+from unittest.mock import patch
 
-import salt.states.virt as virt
 import salt.utils.files
 from salt.exceptions import SaltInvocationError
+
+import saltext.virt.states.virt as virt
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
@@ -37,15 +41,15 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        self.mock_libvirt = (
-            LibvirtMock()
-        )  # pylint: disable=attribute-defined-outside-init
+        self.mock_libvirt = LibvirtMock()  # pylint: disable=attribute-defined-outside-init
         self.addCleanup(delattr, self, "mock_libvirt")
         loader_globals = {"libvirt": self.mock_libvirt}
         return {virt: loader_globals}
 
     @classmethod
     def setUpClass(cls):
+        if not os.path.exists(RUNTIME_VARS.TMP):
+            os.makedirs(RUNTIME_VARS.TMP)
         cls.pki_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
     @classmethod
@@ -82,9 +86,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(virt.keys(name, basepath=self.pki_dir), ret)
 
                 with patch.dict(virt.__opts__, {"test": False}):
-                    with patch.object(
-                        salt.utils.files, "fopen", MagicMock(mock_open())
-                    ):
+                    with patch.object(salt.utils.files, "fopen", mock_open()):
                         comt = "Updated libvirt certs and keys"
                         ret.update(
                             {
@@ -93,9 +95,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                 "changes": {"servercert": "new"},
                             }
                         )
-                        self.assertDictEqual(
-                            virt.keys(name, basepath=self.pki_dir), ret
-                        )
+                        self.assertDictEqual(virt.keys(name, basepath=self.pki_dir), ret)
 
     def test_keys_with_expiration_days(self):
         """
@@ -128,9 +128,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     )
 
                 with patch.dict(virt.__opts__, {"test": False}):
-                    with patch.object(
-                        salt.utils.files, "fopen", MagicMock(mock_open())
-                    ):
+                    with patch.object(salt.utils.files, "fopen", mock_open()):
                         comt = "Updated libvirt certs and keys"
                         ret.update(
                             {
@@ -163,9 +161,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(virt.__salt__, {"pillar.ext": mock}):
                 comt = "All keys are correct"
                 ret.update({"comment": comt})
-                self.assertDictEqual(
-                    virt.keys(name, basepath=self.pki_dir, st="California"), ret
-                )
+                self.assertDictEqual(virt.keys(name, basepath=self.pki_dir, st="California"), ret)
 
                 with patch.dict(virt.__opts__, {"test": True}):
                     comt = "Libvirt keys are set to be updated"
@@ -175,9 +171,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     )
 
                 with patch.dict(virt.__opts__, {"test": False}):
-                    with patch.object(
-                        salt.utils.files, "fopen", MagicMock(mock_open())
-                    ):
+                    with patch.object(salt.utils.files, "fopen", mock_open()):
                         comt = "Updated libvirt certs and keys"
                         ret.update(
                             {
@@ -239,9 +233,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     )
 
                 with patch.dict(virt.__opts__, {"test": False}):
-                    with patch.object(
-                        salt.utils.files, "fopen", MagicMock(mock_open())
-                    ):
+                    with patch.object(salt.utils.files, "fopen", mock_open()):
                         comt = "Updated libvirt certs and keys"
                         ret.update(
                             {
@@ -268,10 +260,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
         pool_defined state test cases.
         """
         ret = {"name": "mypool", "changes": {}, "result": True, "comment": ""}
-        mocks = {
-            mock: MagicMock(return_value=True)
-            for mock in ["define", "autostart", "build"]
-        }
+        mocks = {mock: MagicMock(return_value=True) for mock in ["define", "autostart", "build"]}
         with patch.dict(virt.__opts__, {"test": False}):
             with patch.dict(
                 virt.__salt__,
@@ -470,9 +459,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             for mock in mocks:
                 mocks[mock].reset_mock()
             mocks["update"] = MagicMock(return_value=True)
-            mocks["build"] = MagicMock(
-                side_effect=self.mock_libvirt.libvirtError("Existing VG")
-            )
+            mocks["build"] = MagicMock(side_effect=self.mock_libvirt.libvirtError("Existing VG"))
             with patch.dict(
                 virt.__salt__,
                 {  # pylint: disable=no-member
@@ -486,9 +473,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 ret.update(
                     {
-                        "changes": {
-                            "mypool": "Pool updated, built, autostart flag changed"
-                        },
+                        "changes": {"mypool": "Pool updated, built, autostart flag changed"},
                         "comment": "Pool mypool updated, built, autostart flag changed",
                         "result": True,
                     }
@@ -545,9 +530,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                 virt.__salt__,
                 {  # pylint: disable=no-member
                     "virt.pool_info": MagicMock(
-                        return_value={
-                            "mypool": {"state": "running", "autostart": False}
-                        }
+                        return_value={"mypool": {"state": "running", "autostart": False}}
                     ),
                     "virt.pool_update": mocks["update"],
                     "virt.pool_build": mocks["build"],
@@ -611,9 +594,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     "virt.pool_update": MagicMock(return_value=False),
                 },
             ):
-                ret.update(
-                    {"changes": {}, "comment": "Pool mypool unchanged", "result": True}
-                )
+                ret.update({"changes": {}, "comment": "Pool mypool unchanged", "result": True})
                 self.assertDictEqual(
                     virt.pool_defined(
                         "mypool",
@@ -688,9 +669,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 ret.update(
                     {
-                        "changes": {
-                            "mypool": "Pool defined, marked for autostart, started"
-                        },
+                        "changes": {"mypool": "Pool defined, marked for autostart, started"},
                         "comment": "Pool mypool defined, marked for autostart, started",
                     }
                 )
@@ -851,13 +830,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update(
                     {
                         "changes": {
-                            "mypool": (
-                                "Pool updated, built, autostart flag changed, started"
-                            )
+                            "mypool": ("Pool updated, built, autostart flag changed, started")
                         },
                         "comment": (
-                            "Pool mypool updated, built, autostart flag changed,"
-                            " started"
+                            "Pool mypool updated, built, autostart flag changed," " started"
                         ),
                         "result": True,
                     }
@@ -917,9 +893,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                 virt.__salt__,
                 {  # pylint: disable=no-member
                     "virt.pool_info": MagicMock(
-                        return_value={
-                            "mypool": {"state": "running", "autostart": False}
-                        }
+                        return_value={"mypool": {"state": "running", "autostart": False}}
                     ),
                     "virt.pool_update": mocks["update"],
                     "virt.pool_build": mocks["build"],
@@ -1049,9 +1023,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 ret.update(
                     {
-                        "changes": {
-                            "mypool": "Pool defined, marked for autostart, started"
-                        },
+                        "changes": {"mypool": "Pool defined, marked for autostart, started"},
                         "comment": "Pool mypool defined, marked for autostart, started",
                         "result": None,
                     }
@@ -1148,9 +1120,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                 "virt.pool_info": MagicMock(
                     return_value={"test01": {"state": "running", "type": "dir"}}
                 ),
-                "virt.pool_list_volumes": MagicMock(
-                    return_value=["vm01.qcow2", "vm02.qcow2"]
-                ),
+                "virt.pool_list_volumes": MagicMock(return_value=["vm01.qcow2", "vm02.qcow2"]),
                 "virt.pool_refresh": MagicMock(return_value=True),
                 "virt.volume_delete": MagicMock(return_value=True),
                 "virt.pool_stop": MagicMock(return_value=True),
@@ -1352,8 +1322,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "changes": {},
                         "result": True,
                         "comment": (
-                            "The capacity of the volume is different, but no resize"
-                            " performed"
+                            "The capacity of the volume is different, but no resize" " performed"
                         ),
                     },
                 )
@@ -1611,8 +1580,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "changes": {},
                         "result": True,
                         "comment": (
-                            "The capacity of the volume is different, but no resize"
-                            " performed"
+                            "The capacity of the volume is different, but no resize" " performed"
                         ),
                     },
                 )

@@ -1,14 +1,19 @@
-import pytest
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
-import salt.states.virt as virt
+import pytest
 from salt.exceptions import CommandExecutionError
-from tests.pytests.unit.states.virt.helpers import domain_update_call
-from tests.support.mock import MagicMock, patch
+
+import saltext.virt.states.virt as virt
+from tests.unit.states.virt.helpers import domain_update_call
 
 
 @pytest.fixture
 def configure_loader_modules(libvirt_mock):
     return {virt: {"libvirt": libvirt_mock}}
+
+
+setattr(configure_loader_modules, "_pytestfixturefunction", True)
 
 
 def test_defined_no_change(test):
@@ -222,9 +227,7 @@ def test_defined_update_definition_error(test):
     """
     with patch.dict(virt.__opts__, {"test": test}):
         init_mock = MagicMock(return_value=True)
-        update_mock = MagicMock(
-            side_effect=[virt.libvirt.libvirtError("error message")]
-        )
+        update_mock = MagicMock(side_effect=[virt.libvirt.libvirtError("error message")])
         with patch.dict(
             virt.__salt__,
             {
@@ -240,9 +243,7 @@ def test_defined_update_definition_error(test):
                 "comment": "error message",
             }
             init_mock.assert_not_called()
-            assert update_mock.call_args_list == [
-                domain_update_call("myvm", cpu=2, test=test)
-            ]
+            assert update_mock.call_args_list == [domain_update_call("myvm", cpu=2, test=test)]
 
 
 @pytest.mark.parametrize("running", ["running", "shutdown"])
@@ -418,9 +419,7 @@ def test_running_update(test, running):
             virt.__salt__,
             {
                 "virt.vm_state": MagicMock(return_value={"myvm": running}),
-                "virt.update": MagicMock(
-                    return_value={"definition": True, "cpu": True}
-                ),
+                "virt.update": MagicMock(return_value={"definition": True, "cpu": True}),
                 "virt.start": start_mock,
                 "virt.list_domains": MagicMock(return_value=["myvm"]),
             },
@@ -453,9 +452,7 @@ def test_running_definition_error():
             virt.__salt__,
             {
                 "virt.vm_state": MagicMock(return_value={"myvm": "running"}),
-                "virt.update": MagicMock(
-                    side_effect=[virt.libvirt.libvirtError("error message")]
-                ),
+                "virt.update": MagicMock(side_effect=[virt.libvirt.libvirtError("error message")]),
                 "virt.list_domains": MagicMock(return_value=["myvm"]),
             },
         ):
@@ -550,9 +547,7 @@ def test_stopped_error():
             {
                 "virt.list_domains": MagicMock(return_value=["myvm", "vm1"]),
                 "virt.vm_state": MagicMock(return_value={"myvm": "running"}),
-                "virt.shutdown": MagicMock(
-                    side_effect=virt.libvirt.libvirtError("Some error")
-                ),
+                "virt.shutdown": MagicMock(side_effect=virt.libvirt.libvirtError("Some error")),
             },
         ):
             assert virt.stopped("myvm") == {
@@ -634,9 +629,7 @@ def test_powered_off_error():
             {
                 "virt.list_domains": MagicMock(return_value=["myvm", "vm1"]),
                 "virt.vm_state": MagicMock(return_value={"myvm": "running"}),
-                "virt.stop": MagicMock(
-                    side_effect=virt.libvirt.libvirtError("Some error")
-                ),
+                "virt.stop": MagicMock(side_effect=virt.libvirt.libvirtError("Some error")),
             },
         ):
             assert virt.powered_off("myvm") == {
@@ -656,9 +649,7 @@ def test_powered_off_not_existing():
         with patch.dict(
             virt.__salt__, {"virt.list_domains": MagicMock(return_value=[])}
         ):  # pylint: disable=no-member
-            ret.update(
-                {"changes": {}, "result": False, "comment": "No changes had happened"}
-            )
+            ret.update({"changes": {}, "result": False, "comment": "No changes had happened"})
             assert virt.powered_off("myvm") == {
                 "name": "myvm",
                 "changes": {},
@@ -713,9 +704,7 @@ def test_snapshot_error():
             virt.__salt__,
             {
                 "virt.list_domains": MagicMock(return_value=["myvm", "vm1"]),
-                "virt.snapshot": MagicMock(
-                    side_effect=virt.libvirt.libvirtError("Some error")
-                ),
+                "virt.snapshot": MagicMock(side_effect=virt.libvirt.libvirtError("Some error")),
             },
         ):
             assert virt.snapshot("myvm") == {
@@ -731,9 +720,7 @@ def test_snapshot_not_existing(test):
     snapshot state test, guest not existing.
     """
     with patch.dict(virt.__opts__, {"test": test}):
-        with patch.dict(
-            virt.__salt__, {"virt.list_domains": MagicMock(return_value=[])}
-        ):
+        with patch.dict(virt.__salt__, {"virt.list_domains": MagicMock(return_value=[])}):
             assert virt.snapshot("myvm") == {
                 "name": "myvm",
                 "changes": {},
@@ -787,9 +774,7 @@ def test_rebooted_error():
             virt.__salt__,
             {
                 "virt.list_domains": MagicMock(return_value=["myvm", "vm1"]),
-                "virt.reboot": MagicMock(
-                    side_effect=virt.libvirt.libvirtError("Some error")
-                ),
+                "virt.reboot": MagicMock(side_effect=virt.libvirt.libvirtError("Some error")),
             },
         ):
             assert virt.rebooted("myvm") == {
@@ -805,9 +790,7 @@ def test_rebooted_not_existing(test):
     rebooted state test cases.
     """
     with patch.dict(virt.__opts__, {"test": test}):
-        with patch.dict(
-            virt.__salt__, {"virt.list_domains": MagicMock(return_value=[])}
-        ):
+        with patch.dict(virt.__salt__, {"virt.list_domains": MagicMock(return_value=[])}):
             assert virt.rebooted("myvm") == {
                 "name": "myvm",
                 "changes": {},

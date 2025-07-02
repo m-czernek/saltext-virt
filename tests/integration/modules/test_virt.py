@@ -67,9 +67,7 @@ def virt_minion_0(
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
     )
-    factory.after_terminate(
-        pytest.helpers.remove_stale_minion_key, salt_master, factory.id
-    )
+    factory.after_terminate(pytest.helpers.remove_stale_minion_key, salt_master, factory.id)
     with factory.started():
         yield factory
 
@@ -109,9 +107,7 @@ def virt_minion_1(
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
     )
-    factory.after_terminate(
-        pytest.helpers.remove_stale_minion_key, salt_master, factory.id
-    )
+    factory.after_terminate(pytest.helpers.remove_stale_minion_key, salt_master, factory.id)
     with factory.started():
         yield factory
 
@@ -259,9 +255,7 @@ class TestVirtTest:
                 _use_item_location=True,
             )
         vendors = ["Intel", "ARM", "AMD"]
-        ret = salt_cli.run(
-            "virt.cpu_baseline", out="libvirt", minion_tgt=virt_minion_0.id
-        )
+        ret = salt_cli.run("virt.cpu_baseline", out="libvirt", minion_tgt=virt_minion_0.id)
         assert ret.returncode == 0, ret
         cpu_baseline = ret.data
         assert isinstance(cpu_baseline, str)
@@ -429,9 +423,7 @@ class TestVirtMigrateTest:
         assert isinstance(domains, list)
         assert domains == []
 
-    def test_ssh_migration(
-        self, salt_cli, virt_minion_0, virt_minion_1, prep_virt, virt_domain
-    ):
+    def test_ssh_migration(self, salt_cli, virt_minion_0, virt_minion_1, prep_virt, virt_domain):
         """
         Test domain migration over SSH, TCP and TLS transport protocol
         """
@@ -480,9 +472,7 @@ class TestVirtMigrateTest:
         assert isinstance(domains, list)
         assert domains == [virt_domain], "Failed to migrate VM"
 
-    def test_tcp_migration(
-        self, salt_cli, virt_minion_0, virt_minion_1, prep_virt, virt_domain
-    ):
+    def test_tcp_migration(self, salt_cli, virt_minion_0, virt_minion_1, prep_virt, virt_domain):
         """
         Test domain migration over SSH, TCP and TLS transport protocol
         """
@@ -523,9 +513,7 @@ class TestVirtMigrateTest:
         assert isinstance(domains, list)
         assert domains == [virt_domain], "Failed to migrate VM"
 
-    def test_tls_migration(
-        self, salt_cli, virt_minion_0, virt_minion_1, prep_virt, virt_domain
-    ):
+    def test_tls_migration(self, salt_cli, virt_minion_0, virt_minion_1, prep_virt, virt_domain):
         """
         Test domain migration over SSH, TCP and TLS transport protocol
         """
