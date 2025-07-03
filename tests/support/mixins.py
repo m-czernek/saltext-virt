@@ -8,6 +8,8 @@ Class Mix-Ins
 Some reusable class Mixins
 """
 
+# pylint: disable=import-error,import-outside-toplevel
+
 import atexit
 import copy
 import functools
@@ -96,6 +98,7 @@ class AdaptedConfigurationTestCaseMixin:
 
         cdict = AdaptedConfigurationTestCaseMixin.get_config(config_for, from_scratch=True)
 
+        rdict = {}
         if config_for in ("master", "client_config"):
             rdict = salt.config.apply_master_config(config_overrides, cdict)
         if config_for == "minion":
@@ -300,11 +303,13 @@ class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
         if not salt.utils.platform.is_windows():
             opts["close_fds"] = True
         # Let's get the output of git describe
+        #  pylint: disable-next=consider-using-with
         process = subprocess.Popen(
             [git, "describe", "--tags", "--first-parent", "--match", "v[0-9]*"], **opts
         )
         out, err = process.communicate()
         if process.returncode != 0:
+            #  pylint: disable-next=consider-using-with
             process = subprocess.Popen([git, "describe", "--tags", "--match", "v[0-9]*"], **opts)
             out, err = process.communicate()
         if not out:
@@ -355,6 +360,7 @@ class _FixLoaderModuleMockMixinMroOrder(type):
         instance = super().__new__(mcs, cls_name, tuple(bases), cls_dict)
 
         # Apply our setUp function decorator
+        #  pylint: disable-next=invalid-name
         instance.setUp = LoaderModuleMockMixin.__setup_loader_modules_mocks__(instance.setUp)
         return instance
 
@@ -394,6 +400,7 @@ class LoaderModuleMockMixin(metaclass=_FixLoaderModuleMockMixinMroOrder):
 
 
 class XMLEqualityMixin:
+    #  pylint: disable-next=invalid-name
     def assertEqualXML(self, e1, e2):
         if isinstance(e1, bytes):
             e1 = e1.decode("utf-8")
@@ -417,17 +424,21 @@ class XMLEqualityMixin:
 
 
 class SaltReturnAssertsMixin:
+    #  pylint: disable-next=invalid-name
     def assertReturnSaltType(self, ret):
         try:
             self.assertTrue(isinstance(ret, dict))
         except AssertionError:
+            #  pylint: disable-next=raise-missing-from
             raise AssertionError(f"{type(ret).__name__} is not dict. Salt returned: {ret}")
 
+    #  pylint: disable-next=invalid-name
     def assertReturnNonEmptySaltType(self, ret):
         self.assertReturnSaltType(ret)
         try:
             self.assertNotEqual(ret, {})
         except AssertionError:
+            #  pylint: disable-next=raise-missing-from
             raise AssertionError("{} is equal to {}. Salt returned an empty dictionary.")
 
     def __return_valid_keys(self, keys):
@@ -442,6 +453,7 @@ class SaltReturnAssertsMixin:
             raise RuntimeError("The passed keys need to be a list")
         return keys
 
+    #  pylint: disable-next=invalid-name
     def __getWithinSaltReturn(self, ret, keys):
         self.assertReturnNonEmptySaltType(ret)
         ret_data = []
@@ -451,6 +463,7 @@ class SaltReturnAssertsMixin:
             try:
                 ret_item = part[okeys.pop(0)]
             except (KeyError, TypeError):
+                #  pylint: disable-next=raise-missing-from
                 raise AssertionError(
                     "Could not get ret{} from salt's return: {}".format(
                         "".join([f"['{k}']" for k in keys]), part
@@ -460,6 +473,7 @@ class SaltReturnAssertsMixin:
                 try:
                     ret_item = ret_item[okeys.pop(0)]
                 except (KeyError, TypeError):
+                    #  pylint: disable-next=raise-missing-from
                     raise AssertionError(
                         "Could not get ret{} from salt's return: {}".format(
                             "".join([f"['{k}']" for k in keys]), part
@@ -468,6 +482,7 @@ class SaltReturnAssertsMixin:
             ret_data.append(ret_item)
         return ret_data
 
+    #  pylint: disable-next=invalid-name
     def assertSaltTrueReturn(self, ret):
         try:
             for saltret in self.__getWithinSaltReturn(ret, "result"):
@@ -475,14 +490,17 @@ class SaltReturnAssertsMixin:
         except AssertionError:
             log.info("Salt Full Return:\n%s", pprint.pformat(ret))
             try:
+                #  pylint: disable-next=raise-missing-from
                 raise AssertionError(
                     "{result} is not True. Salt Comment:\n{comment}".format(
                         **(next(iter(ret.values())))
                     )
                 )
             except (AttributeError, IndexError):
+                #  pylint: disable-next=raise-missing-from
                 raise AssertionError(f"Failed to get result. Salt Returned:\n{pprint.pformat(ret)}")
 
+    #  pylint: disable-next=invalid-name
     def assertSaltFalseReturn(self, ret):
         try:
             for saltret in self.__getWithinSaltReturn(ret, "result"):
@@ -490,14 +508,17 @@ class SaltReturnAssertsMixin:
         except AssertionError:
             log.info("Salt Full Return:\n%s", pprint.pformat(ret))
             try:
+                #  pylint: disable-next=raise-missing-from
                 raise AssertionError(
                     "{result} is not False. Salt Comment:\n{comment}".format(
                         **(next(iter(ret.values())))
                     )
                 )
             except (AttributeError, IndexError):
+                #  pylint: disable-next=raise-missing-from
                 raise AssertionError(f"Failed to get result. Salt Returned: {ret}")
 
+    #  pylint: disable-next=invalid-name
     def assertSaltNoneReturn(self, ret):
         try:
             for saltret in self.__getWithinSaltReturn(ret, "result"):
@@ -505,50 +526,62 @@ class SaltReturnAssertsMixin:
         except AssertionError:
             log.info("Salt Full Return:\n%s", pprint.pformat(ret))
             try:
+                #  pylint: disable-next=raise-missing-from
                 raise AssertionError(
                     "{result} is not None. Salt Comment:\n{comment}".format(
                         **(next(iter(ret.values())))
                     )
                 )
             except (AttributeError, IndexError):
+                #  pylint: disable-next=raise-missing-from
                 raise AssertionError(f"Failed to get result. Salt Returned: {ret}")
 
+    #  pylint: disable-next=invalid-name
     def assertInSaltComment(self, in_comment, ret):
         for saltret in self.__getWithinSaltReturn(ret, "comment"):
             self.assertIn(in_comment, saltret)
 
+    #  pylint: disable-next=invalid-name
     def assertNotInSaltComment(self, not_in_comment, ret):
         for saltret in self.__getWithinSaltReturn(ret, "comment"):
             self.assertNotIn(not_in_comment, saltret)
 
+    #  pylint: disable-next=invalid-name
     def assertSaltCommentRegexpMatches(self, ret, pattern):
         return self.assertInSaltReturnRegexpMatches(ret, pattern, "comment")
 
+    #  pylint: disable-next=invalid-name
     def assertInSaltStateWarning(self, in_comment, ret):
         for saltret in self.__getWithinSaltReturn(ret, "warnings"):
             self.assertIn(in_comment, saltret)
 
+    #  pylint: disable-next=invalid-name
     def assertNotInSaltStateWarning(self, not_in_comment, ret):
         for saltret in self.__getWithinSaltReturn(ret, "warnings"):
             self.assertNotIn(not_in_comment, saltret)
 
+    #  pylint: disable-next=invalid-name
     def assertInSaltReturn(self, item_to_check, ret, keys):
         for saltret in self.__getWithinSaltReturn(ret, keys):
             self.assertIn(item_to_check, saltret)
 
+    #  pylint: disable-next=invalid-name
     def assertNotInSaltReturn(self, item_to_check, ret, keys):
         for saltret in self.__getWithinSaltReturn(ret, keys):
             self.assertNotIn(item_to_check, saltret)
 
+    #  pylint: disable-next=invalid-name
     def assertInSaltReturnRegexpMatches(self, ret, pattern, keys=()):
         for saltret in self.__getWithinSaltReturn(ret, keys):
             self.assertRegex(saltret, pattern)
 
+    #  pylint: disable-next=invalid-name
     def assertSaltStateChangesEqual(self, ret, comparison, keys=()):
         keys = ["changes"] + self.__return_valid_keys(keys)
         for saltret in self.__getWithinSaltReturn(ret, keys):
             self.assertEqual(saltret, comparison)
 
+    #  pylint: disable-next=invalid-name
     def assertSaltStateChangesNotEqual(self, ret, comparison, keys=()):
         keys = ["changes"] + self.__return_valid_keys(keys)
         for saltret in self.__getWithinSaltReturn(ret, keys):
@@ -592,6 +625,7 @@ class SaltMinionEventAssertsMixin:
     """
 
     @classmethod
+    #  pylint: disable-next=invalid-name
     def setUpClass(cls):
         opts = copy.deepcopy(RUNTIME_VARS.RUNTIME_CONFIGS["minion"])
         cls.q = multiprocessing.Queue()
@@ -608,15 +642,18 @@ class SaltMinionEventAssertsMixin:
             raise RuntimeError("Unexpected message in test's event queue")
 
     @classmethod
+    #  pylint: disable-next=invalid-name
     def tearDownClass(cls):
         cls.fetch_proc.join()
         del cls.q
         del cls.fetch_proc
 
+    #  pylint: disable-next=invalid-name
     def assertMinionEventFired(self, tag):
         # TODO
         raise salt.exceptions.NotImplemented("assertMinionEventFired() not implemented")
 
+    #  pylint: disable-next=invalid-name
     def assertMinionEventReceived(self, desired_event, timeout=5, sleep_time=0.5):
         start = time.time()
         while True:

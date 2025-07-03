@@ -12,6 +12,7 @@ from collections import deque
 
 import attr
 
+#  pylint: disable-next=import-error
 from tests.support.mock import patch
 
 log = logging.getLogger(__name__)
@@ -151,6 +152,7 @@ class LoaderModuleMock:
                 continue
 
             if key.startswith("__"):
+                #  pylint: disable-next=no-else-raise
                 if key in ("__init__", "__virtual__"):
                     raise RuntimeError(
                         "No need to patch {!r}. Passed loader module dict: {}".format(

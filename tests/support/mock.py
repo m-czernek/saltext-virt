@@ -12,6 +12,7 @@ Note: mock >= 2.0.0 required since unittest.mock does not have
 MagicMock.assert_called in Python < 3.6.
 """
 
+#  pylint: disable-next=unknown-option-value
 # pylint: disable=unused-import,function-redefined,blacklisted-module,blacklisted-external-module
 
 
@@ -184,10 +185,12 @@ class MockFH:
                 break
 
     def _write(self, content):
+        #  pylint: disable-next=no-else-raise
         if not self.write_mode:
             raise OSError("File not open for writing")
         else:
             content_type = type(content)
+            #  pylint: disable-next=no-else-raise
             if self.binary_mode and content_type is not bytes:
                 raise TypeError(f"a bytes-like object is required, not '{content_type.__name__}'")
             elif not self.binary_mode and content_type is not str:
@@ -376,6 +379,7 @@ class MockOpen:
                 file_contents = matched_contents
             except IndexError:
                 # We've run out of file contents, abort!
+                #  pylint: disable-next=raise-missing-from
                 raise RuntimeError(
                     "File matching expression '{}' opened more times than "
                     "expected".format(matched_pattern)
@@ -396,6 +400,7 @@ class MockOpen:
         except KeyError:
             # No matching glob in read_data, treat this as a file that does
             # not exist and raise the appropriate exception.
+            #  pylint: disable-next=raise-missing-from
             raise OSError(errno.ENOENT, "No such file or directory", name)
 
     def write_calls(self, path=None):
@@ -459,4 +464,5 @@ class MockTimedProc:
 
 
 # reimplement mock_open to support multiple filehandles
+#  pylint: disable-next=invalid-name
 mock_open = MockOpen

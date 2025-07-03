@@ -346,13 +346,13 @@ def prep_virt(salt_cli, virt_minion_0, virt_minion_1, virt_domain, grains):
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_0.id)
         assert ret.returncode == 0, ret
         domains = ret.data
-        for domain in domains:
+        for _ in domains:
             salt_cli.run("virt.stop", virt_domain, minion_tgt=virt_minion_0.id)
             salt_cli.run("virt.undefine", virt_domain, minion_tgt=virt_minion_0.id)
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_1.id)
         assert ret.returncode == 0, ret
         domains = ret.data
-        for domain in domains:
+        for _ in domains:
             salt_cli.run("virt.stop", virt_domain, minion_tgt=virt_minion_1.id)
             salt_cli.run("virt.undefine", virt_domain, minion_tgt=virt_minion_1.id)
         ret = salt_cli.run(
@@ -369,13 +369,13 @@ def prep_virt(salt_cli, virt_minion_0, virt_minion_1, virt_domain, grains):
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_0.id)
         assert ret.returncode == 0, ret
         domains = ret.data
-        for domain in domains:
+        for _ in domains:
             salt_cli.run("virt.stop", virt_domain, minion_tgt=virt_minion_0.id)
             salt_cli.run("virt.undefine", virt_domain, minion_tgt=virt_minion_0.id)
         ret = salt_cli.run("virt.list_domains", minion_tgt=virt_minion_1.id)
         assert ret.returncode == 0, ret
         domains = ret.data
-        for domain in domains:
+        for _ in domains:
             salt_cli.run("virt.stop", virt_domain, minion_tgt=virt_minion_1.id)
             salt_cli.run("virt.undefine", virt_domain, minion_tgt=virt_minion_1.id)
 

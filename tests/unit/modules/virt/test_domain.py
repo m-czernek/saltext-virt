@@ -5,10 +5,13 @@ from unittest.mock import patch
 
 import pytest
 import salt.syspaths
+
+#  pylint: disable-next=consider-using-from-import
 import salt.utils.xmlutil as xmlutil
 from salt.exceptions import CommandExecutionError
 from salt.exceptions import SaltInvocationError
 
+#  pylint: disable-next=consider-using-from-import
 import saltext.virt.modules.virt as virt
 
 from .conftest import loader_modules_config
@@ -34,6 +37,7 @@ setattr(configure_loader_modules, "_pytestfixturefunction", True)
         None,
     ],
 )
+#  pylint: disable-next=unused-argument
 def test_gen_xml_for_xen_default_profile(loader, minion_opts):
     """
     Test virt._gen_xml(), XEN PV default profile case
@@ -127,6 +131,7 @@ def test_update_xen_disk_volumes(make_mock_vm, make_mock_storage_pool):
             <controller type='xenbus' index='0'/>
           </devices>
         </domain>"""
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm(xml_def)
     make_mock_storage_pool("default", "dir", ["my_vm_system"])
     make_mock_storage_pool("my-iscsi", "iscsi", ["unit:0:0:1"])
@@ -301,8 +306,10 @@ def test_get_disk_convert_volumes(make_mock_vm, make_mock_storage_pool):
       </devices>
     </domain>
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm(vm_def)
 
+    #  pylint: disable-next=unused-variable
     pool_mock = make_mock_storage_pool("default", "dir", ["srv01_system", "srv01_data"])
 
     subprocess_mock = MagicMock()
@@ -375,6 +382,7 @@ def test_get_disk_missing(make_mock_vm):
       </devices>
     </domain>
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm(vm_def)
 
     subprocess_mock = MagicMock()
@@ -409,6 +417,7 @@ def test_get_disk_no_qemuimg(make_mock_vm):
       </devices>
     </domain>
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm(vm_def)
 
     subprocess_mock = MagicMock()
@@ -444,6 +453,7 @@ def test_update_approx_mem(make_mock_vm):
           <on_reboot>restart</on_reboot>
         </domain>
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm(xml_def)
 
     ret = virt.update("my_vm", mem={"boot": "3253941043B", "current": "3253941043B"})
@@ -492,6 +502,7 @@ def test_update_hypervisor_features(make_mock_vm):
           <on_reboot>restart</on_reboot>
         </domain>
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm(xml_def)
 
     # Update with no change to the features
@@ -636,6 +647,7 @@ def test_update_clock(make_mock_vm):
           <on_reboot>restart</on_reboot>
         </domain>
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm(xml_def)
 
     # Update with no change to the features
@@ -706,6 +718,7 @@ def test_update_stop_on_reboot_reset(make_mock_vm):
             <type arch='x86_64'>hvm</type>
           </os>
         </domain>"""
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm(xml_def)
 
     ret = virt.update("my_vm")
@@ -730,6 +743,7 @@ def test_update_stop_on_reboot(make_mock_vm):
             <type arch='x86_64'>hvm</type>
           </os>
         </domain>"""
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm(xml_def)
 
     ret = virt.update("my_vm", stop_on_reboot=True)
@@ -880,6 +894,7 @@ def test_update_hostdev_nochange(make_mock_device, make_mock_vm):
             </hostdev>
           </devices>
         </domain>"""
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm(xml_def)
 
     make_mock_device(
@@ -996,6 +1011,7 @@ def test_update_hostdev_changes(running, live, make_mock_device, make_mock_vm, t
         """
     )
 
+    #  pylint: disable-next=unused-variable
     ret = virt.update("my_vm", host_devices=["usb_3_1_3"], test=test, live=live)
     define_mock = virt.libvirt.openAuth().defineXML
     assert_called(define_mock, not test)
@@ -1229,6 +1245,7 @@ def test_update_no_param(make_mock_vm):
     """
     Test virt.update(), no parameter passed
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm()
     ret = virt.update("my_vm")
     assert not ret["definition"]
@@ -1278,6 +1295,7 @@ def test_update_add_cpu_topology(make_mock_vm):
     """
     Test virt.update(), add cpu topology settings
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm()
     ret = virt.update(
         "my_vm",
@@ -1380,6 +1398,7 @@ def test_update_bootdev_unchanged(make_mock_vm, boot_dev):
     """
     Test virt.update(), unchanged boot devices case
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm(
         """
             <domain type='kvm' id='7'>
@@ -1412,6 +1431,7 @@ def test_update_boot_kernel_paths(make_mock_vm):
     """
     Test virt.update(), change boot with kernel/initrd path and kernel params
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm()
     ret = virt.update(
         "my_vm",
@@ -1432,6 +1452,7 @@ def test_update_boot_uefi_paths(make_mock_vm):
     """
     Test virt.update(), add boot with uefi loader and nvram paths
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm()
 
     ret = virt.update(
@@ -1454,6 +1475,7 @@ def test_update_boot_uefi_auto(make_mock_vm):
     """
     Test virt.update(), change boot with efi value (automatic discovery of loader)
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm()
 
     ret = virt.update("my_vm", boot={"efi": True})
@@ -1467,6 +1489,7 @@ def test_update_boot_uefi_auto_nochange(make_mock_vm):
     Test virt.update(), change boot with efi value and no change.
     libvirt converts the efi=True value into a loader and nvram config with path.
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm(
         """
         <domain type='kvm' id='1'>
@@ -1497,6 +1520,7 @@ def test_update_boot_invalid(make_mock_vm):
     """
     Test virt.update(), change boot, invalid values
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm()
 
     with pytest.raises(SaltInvocationError):
@@ -1516,6 +1540,7 @@ def test_update_add_memtune(make_mock_vm):
     """
     Test virt.update(), add memory tune config case
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm()
     ret = virt.update(
         "my_vm",
@@ -1539,6 +1564,7 @@ def test_update_add_memtune_invalid_unit(make_mock_vm):
     """
     Test virt.update(), add invalid unit to memory tuning config
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm()
 
     with pytest.raises(SaltInvocationError):
@@ -1552,6 +1578,7 @@ def test_update_add_numatune(make_mock_vm):
     """
     Test virt.update(), add numatune config case
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm()
     ret = virt.update(
         "my_vm",
@@ -1592,6 +1619,7 @@ def test_update_mem(make_mock_vm):
     """
     Test virt.update(), advanced memory amounts changes
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm()
 
     ret = virt.update(
@@ -1611,6 +1639,7 @@ def test_update_add_mem_backing(make_mock_vm):
     """
     Test virt.update(), add memory backing case
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm()
     ret = virt.update(
         "my_vm",
@@ -1652,6 +1681,7 @@ def test_update_add_iothreads(make_mock_vm):
     """
     Test virt.update(), add iothreads
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm()
     ret = virt.update("my_vm", cpu={"iothreads": 5})
     assert ret["definition"]
@@ -1663,6 +1693,7 @@ def test_update_add_cputune(make_mock_vm):
     """
     Test virt.update(), adding CPU tuning parameters
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm()
     cputune = {
         "shares": 2048,
@@ -1737,6 +1768,7 @@ def test_update_graphics(make_mock_vm):
     """
     Test virt.update(), graphics update case
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm(
         """
         <domain type='kvm' id='7'>
@@ -1769,6 +1801,7 @@ def test_update_console(make_mock_vm):
     """
     Test virt.update(), console and serial devices update case
     """
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm(
         """
         <domain type='kvm' id='7'>
@@ -2136,6 +2169,7 @@ def test_update_no_change(make_mock_vm, make_mock_storage_pool):
     """.format(
         root_dir, os.sep
     )
+    #  pylint: disable-next=unused-variable
     domain_mock = make_mock_vm(xml_def)
 
     make_mock_storage_pool("default", "dir", ["my_vm_data"])

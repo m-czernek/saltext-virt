@@ -7,12 +7,14 @@ import attr
 from pytestshellutils.utils import ports
 from saltfactories.daemons.container import SaltMinion
 
+#  pylint: disable-next=import-error
 from tests.conftest import CODE_DIR
 
 log = logging.getLogger(__name__)
 
 
 @attr.s(kw_only=True, slots=True)
+#  pylint: disable-next=too-many-ancestors
 class SaltVirtMinionContainerFactory(SaltMinion):
 
     host_uuid = attr.ib(default=attr.Factory(uuid.uuid4))

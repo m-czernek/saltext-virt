@@ -1,8 +1,11 @@
 import xml.etree.ElementTree as ET
 
 import pytest
+
+#  pylint: disable-next=consider-using-from-import
 import salt.utils.xmlutil as xmlutil
 
+#  pylint: disable-next=consider-using-from-import
 import saltext.virt.modules.virt as virt
 
 from .conftest import loader_modules_config
@@ -337,6 +340,7 @@ def test_update_nat_nochange(make_mock_network):
     """
     Test updating a NAT network without changes
     """
+    #  pylint: disable-next=unused-variable
     net_mock = make_mock_network(
         """
         <network>
@@ -387,6 +391,7 @@ def test_update_nat_change(make_mock_network, test, netmask):
     """
     Test updating a NAT network with changes
     """
+    #  pylint: disable-next=unused-variable
     net_mock = make_mock_network(
         """
         <network>
@@ -445,6 +450,7 @@ def test_update_hostdev_pf(make_mock_network, change):
     """
     Test updating a hostdev network without changes
     """
+    #  pylint: disable-next=unused-variable
     net_mock = make_mock_network(
         """
         <network connections='1'>

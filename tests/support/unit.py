@@ -19,6 +19,7 @@ in use.
 .. _`unittest2`: https://pypi.python.org/pypi/unittest2
 """
 
+#  pylint: disable-next=unknown-option-value
 # pylint: disable=unused-import,blacklisted-module,deprecated-method
 
 
@@ -67,7 +68,9 @@ Sed quis posuere urna."""
 
 class TestSuite(_TestSuite):
     def _handleClassSetUp(self, test, result):
+        #  pylint: disable-next=invalid-name
         previousClass = getattr(result, "_previousTestClass", None)
+        #  pylint: disable-next=invalid-name
         currentClass = test.__class__
         if currentClass == previousClass or getattr(currentClass, "setUpClass", None) is None:
             return super()._handleClassSetUp(test, result)
@@ -83,7 +86,9 @@ class TestSuite(_TestSuite):
     def _tearDownPreviousClass(self, test, result):
         # Run any tearDownClass code defined
         super()._tearDownPreviousClass(test, result)
+        #  pylint: disable-next=invalid-name
         previousClass = getattr(result, "_previousTestClass", None)
+        #  pylint: disable-next=invalid-name
         currentClass = test.__class__
         if currentClass == previousClass:
             return
@@ -116,6 +121,7 @@ class TestSuite(_TestSuite):
         # We override _handleModuleFixture so that we can inspect all test classes in the module.
         # If all tests in a test class are going to be skipped, mark the class to skip.
         # This avoids running setUpClass and tearDownClass unnecessarily
+        #  pylint: disable-next=invalid-name
         currentModule = test.__class__.__module__
         try:
             module = sys.modules[currentModule]
@@ -178,7 +184,9 @@ class TestCase(_TestCase):
     #            cls._chdir_counter += 1
 
     def run(self, result=None):
+        #  pylint: disable-next=attribute-defined-outside-init
         self._prerun_instance_attributes = dir(self)
+        #  pylint: disable-next=invalid-name
         self.maxDiff = None
         outcome = super().run(result=result)
         for attr in dir(self):
@@ -203,6 +211,7 @@ class TestCase(_TestCase):
                     attr,
                 )
                 delattr(self, attr)
+        #  pylint: disable-next=attribute-defined-outside-init
         self._prerun_instance_attributes = None
         del self._prerun_instance_attributes
         return outcome

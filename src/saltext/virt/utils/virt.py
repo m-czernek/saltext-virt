@@ -27,7 +27,7 @@ def download_remote(url, dir):
     """
 
     try:
-        rand = hashlib.md5(os.urandom(32)).hexdigest()
+        rand = hashlib.md5(os.urandom(32), usedforsecurity=False).hexdigest()
         remote_filename = urllib.parse.urlparse(url).path.split("/")[-1]
         full_directory = os.path.join(dir, f"{rand}-{remote_filename}")
         with (
@@ -80,6 +80,7 @@ class VirtKey:
                 expiry = int(fp_.read())
         except OSError:
             log.error(
+                #  pylint: disable-next=implicit-str-concat
                 "Request to sign key for minion '%s' on hyper '%s' " "denied: no authorization",
                 self.id,
                 self.hyper,

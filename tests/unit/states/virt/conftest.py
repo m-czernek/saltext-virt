@@ -8,6 +8,7 @@ class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
     Libvirt library mock
     """
 
+    #  pylint: disable-next=invalid-name
     class libvirtError(Exception):
         """
         libvirtError mock

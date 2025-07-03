@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
+#  pylint: disable-next=consider-using-from-import
 import saltext.virt.modules.virt as virt
 
 from .conftest import loader_modules_config

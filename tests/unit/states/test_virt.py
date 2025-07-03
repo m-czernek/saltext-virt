@@ -12,6 +12,7 @@ from unittest.mock import patch
 import salt.utils.files
 from salt.exceptions import SaltInvocationError
 
+#  pylint: disable-next=consider-using-from-import
 import saltext.virt.states.virt as virt
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS

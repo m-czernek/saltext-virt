@@ -4,6 +4,7 @@ from unittest.mock import patch
 import pytest
 from salt.exceptions import CommandExecutionError
 
+#  pylint: disable-next=consider-using-from-import
 import saltext.virt.states.virt as virt
 from tests.unit.states.virt.helpers import domain_update_call
 
@@ -252,6 +253,7 @@ def test_running_no_change(test, running):
     running state test, no change required case.
     """
     with patch.dict(virt.__opts__, {"test": test}):
+        #  pylint: disable-next=unused-variable
         update_mock = MagicMock(return_value={"definition": False})
         start_mock = MagicMock(return_value=0)
         with patch.dict(
@@ -563,6 +565,7 @@ def test_stopped_not_existing(test):
     stopped state test, non existing guest
     """
     with patch.dict(virt.__opts__, {"test": test}):
+        #  pylint: disable-next=unused-variable
         shutdown_mock = MagicMock(return_value=True)
         with patch.dict(
             virt.__salt__,
@@ -623,6 +626,7 @@ def test_powered_off_error():
     powered_off state test, error case
     """
     with patch.dict(virt.__opts__, {"test": False}):
+        #  pylint: disable-next=unused-variable
         stop_mock = MagicMock(return_value=True)
         with patch.dict(
             virt.__salt__,
@@ -769,6 +773,7 @@ def test_rebooted_error():
     rebooted state test, error case.
     """
     with patch.dict(virt.__opts__, {"test": False}):
+        #  pylint: disable-next=unused-variable
         reboot_mock = MagicMock(return_value=True)
         with patch.dict(
             virt.__salt__,

@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
+#  pylint: disable-next=consider-using-from-import
 import saltext.virt.states.virt as virt
 
 from .helpers import network_update_call

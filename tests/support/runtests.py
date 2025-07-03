@@ -51,6 +51,7 @@ import shutil
 import salt.utils.path
 import salt.utils.platform
 
+#  pylint: disable-next=consider-using-from-import,import-error
 import tests.support.paths as paths
 
 try:
@@ -118,6 +119,7 @@ class RuntimeVars:
 
     def lock(self):
         # Late import
+        #  pylint: disable-next=import-outside-toplevel
         from salt.utils.immutabletypes import freeze
 
         frozen_vars = freeze(self._vars.copy())

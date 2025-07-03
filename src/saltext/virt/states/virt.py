@@ -106,6 +106,7 @@ def keys(name, basepath="/etc/pki", **kwargs):
         "cacert": os.path.join(basepath, "CA", "cacert.pem"),
     }
 
+    #  pylint: disable-next=consider-using-dict-items
     for key in paths:
         p_key = f"libvirt.{key}.pem"
         if p_key not in pillar:
@@ -159,9 +160,9 @@ def _virt_call(
     result = True if not __opts__["test"] else None
     ret = {"name": domain, "changes": {}, "result": result, "comment": ""}
     targeted_domains = fnmatch.filter(__salt__["virt.list_domains"](), domain)
-    changed_domains = list()
-    ignored_domains = list()
-    noaction_domains = list()
+    changed_domains = []
+    ignored_domains = []
+    noaction_domains = []
     for targeted_domain in targeted_domains:
         try:
             action_needed = True
@@ -1036,6 +1037,7 @@ def running(
         autostart=autostart,
     )
 
+    #  pylint: disable-next=unused-variable
     result = True if not __opts__["test"] else None
     if ret["result"] is None or ret["result"]:
         changed = ret["changes"].get(name, {}).get("definition", False)
@@ -1204,9 +1206,9 @@ def reverted(name, snapshot=None, cleanup=False):  # pylint: disable=redefined-o
         if not domains:
             ret["comment"] = f'No domains found for criteria "{name}"'
         else:
-            ignored_domains = list()
+            ignored_domains = []
             if len(domains) > 1:
-                ret["changes"] = {"reverted": list()}
+                ret["changes"] = {"reverted": []}
             for domain in domains:
                 result = {}
                 try:
@@ -1794,6 +1796,7 @@ def network_running(
         password=password,
     )
 
+    #  pylint: disable-next=unused-variable
     defined = name in ret["changes"] and ret["changes"][name].startswith("Network defined")
 
     result = True if not __opts__["test"] else None
@@ -2395,7 +2398,9 @@ def volume_defined(
         if not same_backing_store or (vol_infos.get("format") != format and format is not None):
             ret["result"] = False
             ret["comment"] = (
-                "A volume with the same name but different backing store or format is" " existing"
+                #  pylint: disable-next=implicit-str-concat
+                "A volume with the same name but different backing store or format is"
+                " existing"
             )
             return ret
 

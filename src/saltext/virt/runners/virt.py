@@ -93,6 +93,7 @@ def list(host=None, quiet=False, hyper=None):  # pylint: disable=redefined-built
     A single host can be passed in to specify an individual host
     to list.
     """
+    del hyper
     if quiet:
         log.warning("'quiet' is deprecated. Please migrate to --quiet")
     ret = {}
@@ -143,7 +144,7 @@ def host_info(host=None):
     Return information about the host connected to this master
     """
     data = query(host, quiet=True)
-    for id_ in data:
+    for id_ in data:  # pylint: disable=consider-using-dict-items
         if "vm_info" in data[id_]:
             data[id_].pop("vm_info")
     __jid_event__.fire_event({"data": data, "outputter": "nested"}, "progress")
@@ -232,7 +233,7 @@ def init(
     __jid_event__.fire_event({"message": "Searching for hosts"}, "progress")
     data = query(host, quiet=True)
     # Check if the name is already deployed
-    for node in data:
+    for node in data:  # pylint: disable=consider-using-dict-items
         if "vm_info" in data[node]:
             if name in data[node]["vm_info"]:
                 __jid_event__.fire_event(

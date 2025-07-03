@@ -12,12 +12,15 @@ from unittest.mock import patch
 
 import pytest
 import salt.config
+
+#  pylint: disable-next=consider-using-from-import
 import salt.modules.config as config
 import salt.syspaths
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError
 from salt.exceptions import SaltInvocationError
 
+#  pylint: disable-next=consider-using-from-import
 import saltext.virt.modules.virt as virt
 from tests.support.helpers import dedent
 from tests.support.mixins import LoaderModuleMockMixin
@@ -29,11 +32,13 @@ class LibvirtMock(MagicMock):
     Libvirt library mock
     """
 
+    #  pylint: disable-next=invalid-name
     class virDomain(MagicMock):
         """
         virDomain mock
         """
 
+    #  pylint: disable-next=invalid-name
     class libvirtError(Exception):
         """
         libvirtError mock
@@ -47,20 +52,25 @@ class LibvirtMock(MagicMock):
             return self.msg
 
 
+#  pylint: disable-next=too-many-public-methods
 class VirtTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.module.virt
     """
 
     def setup_loader_modules(self):
+        #  pylint: disable-next=attribute-defined-outside-init
         self.mock_libvirt = LibvirtMock()
+        #  pylint: disable-next=attribute-defined-outside-init
         self.mock_conn = MagicMock()
         self.mock_conn.getStoragePoolCapabilities.return_value = "<storagepoolCapabilities/>"
         self.mock_libvirt.openAuth.return_value = self.mock_conn
+        #  pylint: disable-next=attribute-defined-outside-init
         self.mock_popen = MagicMock()
         self.addCleanup(delattr, self, "mock_libvirt")
         self.addCleanup(delattr, self, "mock_conn")
         self.addCleanup(delattr, self, "mock_popen")
+        #  pylint: disable-next=attribute-defined-outside-init
         self.mock_subprocess = MagicMock()
         self.mock_subprocess.return_value = self.mock_subprocess  # pylint: disable=no-member
         self.mock_subprocess.Popen.return_value = self.mock_popen  # pylint: disable=no-member
@@ -1182,6 +1192,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
             diskp = virt._disk_profile(self.mock_conn, "noeffect", "kvm", [], "hello")
 
+            #  pylint: disable-next=unused-variable
             pools_path = os.path.join(salt.syspaths.ROOT_DIR, "pools", "mypool") + os.sep
             default_path = os.path.join(salt.syspaths.ROOT_DIR, "default", "path") + os.sep
 
@@ -1915,6 +1926,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         root_dir = os.path.join(salt.syspaths.ROOT_DIR, "srv", "salt-images")
 
+        #  pylint: disable-next=invalid-name
         defineMock = MagicMock(return_value=1)
         self.mock_conn.defineXML = defineMock
         mock_chmod = MagicMock()
@@ -2040,6 +2052,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 self.mock_conn.listStoragePools.return_value = ["default", "test"]
                 with patch.dict(os.__dict__, {"open": MagicMock(), "close": MagicMock()}):
                     cache_mock = MagicMock()
+                    #  pylint: disable-next=no-member
                     with patch.dict(virt.__salt__, {"cp.cache_file": cache_mock}):
                         virt.init(
                             "test vm",
@@ -2069,6 +2082,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         )
                         definition = ET.fromstring(defineMock.call_args_list[0][0][0])
                         self.assertTrue(
+                            #  pylint: disable-next=use-a-generator
                             all(
                                 [
                                     disk.get("type") == "volume"
@@ -2138,6 +2152,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         domain_mock.OSType.return_value = "hvm"
         self.mock_conn.defineXML.return_value = True
         updatedev_mock = MagicMock(return_value=0)
+        #  pylint: disable-next=invalid-name,attribute-defined-outside-init
         domain_mock.updateDeviceFlags = updatedev_mock
         self.mock_conn.listStoragePools.return_value = ["default"]
         self.mock_conn.storagePoolLookupByName.return_value.XMLDesc.return_value = (
@@ -2225,6 +2240,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         domain_mock.OSType.return_value = "hvm"
         self.mock_conn.defineXML.return_value = True
         updatedev_mock = MagicMock(return_value=0)
+        #  pylint: disable-next=attribute-defined-outside-init
         domain_mock.updateDeviceFlags = updatedev_mock
 
         ret = virt.update(
@@ -2357,6 +2373,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test virt.update() a Xen definition no boot parameter.
         """
+        #  pylint: disable-next=unused-variable
         root_dir = os.path.join(salt.syspaths.ROOT_DIR, "srv", "salt-images")
         xml_boot = """
             <domain type='xen' id='8'>
@@ -2371,6 +2388,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             </domain>
         """
         domain_mock_boot = self.set_mock_vm("vm", xml_boot)
+        #  pylint: disable-next=invalid-name,attribute-defined-outside-init
         domain_mock_boot.OSType = MagicMock(return_value="hvm")
         define_mock_boot = MagicMock(return_value=True)
         define_mock_boot.setVcpusFlags = MagicMock(return_value=0)
@@ -2409,6 +2427,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             </domain>
         """
         domain_mock_boot = self.set_mock_vm("vm_with_boot_param", xml_boot)
+        #  pylint: disable-next=attribute-defined-outside-init
         domain_mock_boot.OSType = MagicMock(return_value="hvm")
         define_mock_boot = MagicMock(return_value=True)
         self.mock_conn.defineXML = define_mock_boot
@@ -2527,6 +2546,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             </domain>
         """
         domain_mock = self.set_mock_vm("vm_with_numatune_param", xml_numatune)
+        #  pylint: disable-next=attribute-defined-outside-init
         domain_mock.OSType = MagicMock(return_value="hvm")
         define_mock = MagicMock(return_value=True)
         self.mock_conn.defineXML = define_mock
@@ -2726,12 +2746,14 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               </domain>
          """
         domain_mock = self.set_mock_vm("vm_with_existing_param", xml_with_existing_params)
+        #  pylint: disable-next=attribute-defined-outside-init
         domain_mock.OSType = MagicMock(return_value="hvm")
         define_mock = MagicMock(return_value=True)
         self.mock_conn.defineXML = define_mock
 
         # test update vcpu with existing attributes case
         setvcpus_mock = MagicMock(return_value=0)
+        #  pylint: disable-next=attribute-defined-outside-init
         domain_mock.setVcpusFlags = setvcpus_mock
 
         cpu_attr = {"placement": "static", "cpuset": "0-5", "current": 3, "maximum": 5}
@@ -3273,6 +3295,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             </domain>
         """
         domain_mock = self.set_mock_vm("vm_with_memtune_param", xml_with_memtune_params)
+        #  pylint: disable-next=attribute-defined-outside-init
         domain_mock.OSType = MagicMock(return_value="hvm")
         define_mock = MagicMock(return_value=True)
         self.mock_conn.defineXML = define_mock
@@ -3438,6 +3461,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             </domain>
         """
         domain_mock = self.set_mock_vm("vm_with_memback_param", xml_with_memback_params)
+        #  pylint: disable-next=attribute-defined-outside-init
         domain_mock.OSType = MagicMock(return_value="hvm")
         define_mock = MagicMock(return_value=True)
         self.mock_conn.defineXML = define_mock
@@ -3517,6 +3541,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             </domain>
         """
         domain_mock = self.set_mock_vm("xml_with_iothreads_params", xml_with_iothreads_params)
+        #  pylint: disable-next=attribute-defined-outside-init
         domain_mock.OSType = MagicMock(return_value="hvm")
         define_mock = MagicMock(return_value=True)
         self.mock_conn.defineXML = define_mock
@@ -3590,6 +3615,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     </domain>
                 """
         domain_mock = self.set_mock_vm("xml_with_cputune_params", xml_with_cputune_params)
+        #  pylint: disable-next=attribute-defined-outside-init
         domain_mock.OSType = MagicMock(return_value="hvm")
         define_mock = MagicMock(return_value=True)
         self.mock_conn.defineXML = define_mock
@@ -4137,6 +4163,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.virt.stop", return_value=True)
     @patch("salt.modules.virt.undefine")
     @patch("os.remove")
+    #  pylint: disable-next=unused-argument
     def test_purge_default(self, mock_remove, mock_undefine, mock_stop):
         """
         Test virt.purge() with default parameters
@@ -4189,6 +4216,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("salt.modules.virt.stop", return_value=True)
     @patch("salt.modules.virt.undefine")
+    #  pylint: disable-next=unused-argument
     def test_purge_volumes(self, mock_undefine, mock_stop):
         """
         Test virt.purge() with volume disks
@@ -4249,6 +4277,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("salt.modules.virt.stop", return_value=True)
     @patch("salt.modules.virt.undefine")
+    #  pylint: disable-next=unused-argument
     def test_purge_rbd(self, mock_undefine, mock_stop):
         """
         Test virt.purge() with RBD disks
@@ -4321,6 +4350,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.virt.stop", return_value=True)
     @patch("salt.modules.virt.undefine")
     @patch("os.remove")
+    #  pylint: disable-next=unused-argument
     def test_purge_removable(self, mock_remove, mock_undefine, mock_stop):
         """
         Test virt.purge(removables=True)
@@ -4859,6 +4889,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test the virt.domain_capabilities default output
         """
+        #  pylint: disable-next=invalid-name
         domainXml = """
 <domainCapabilities>
   <path>/usr/bin/qemu-system-x86_64</path>
@@ -4869,6 +4900,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
   <iothreads supported='yes'/>
 </domainCapabilities>
         """
+        #  pylint: disable-next=invalid-name
         hostXml = """
 <capabilities>
   <host>
@@ -4953,7 +4985,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test virt.network_info()
         """
+        #  pylint: disable-next=invalid-name,attribute-defined-outside-init
         self.mock_libvirt.VIR_IP_ADDR_TYPE_IPV4 = 0
+        #  pylint: disable-next=invalid-name,attribute-defined-outside-init
         self.mock_libvirt.VIR_IP_ADDR_TYPE_IPV6 = 1
 
         net_mock = MagicMock()
@@ -5012,7 +5046,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test virt.network_info()
         """
+        #  pylint: disable-next=attribute-defined-outside-init
         self.mock_libvirt.VIR_IP_ADDR_TYPE_IPV4 = 0
+        #  pylint: disable-next=attribute-defined-outside-init
         self.mock_libvirt.VIR_IP_ADDR_TYPE_IPV6 = 1
 
         net_mocks = []
