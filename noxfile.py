@@ -265,7 +265,7 @@ def _lint(session, rcfile, flags, paths, tee_output=True):
         install_salt=False,
         install_coverage_requirements=False,
         install_test_requirements=False,
-        install_extras=["lint", "tests"],
+        install_extras=["lint", "tests", *TEST_DEPENDENCIES],
     )
 
     if tee_output:

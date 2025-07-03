@@ -9,6 +9,8 @@ tests.support.helpers
 Test support helpers
 """
 
+#  pylint: disable=import-error
+
 import asyncio
 import base64
 import builtins
@@ -47,13 +49,8 @@ from pytestshellutils.exceptions import ProcessFailed
 from pytestshellutils.utils import ports
 from pytestshellutils.utils.processes import ProcessResult
 
-#  pylint: disable-next=import-error
 from tests.support.mock import patch
-
-#  pylint: disable-next=import-error
 from tests.support.runtests import RUNTIME_VARS
-
-#  pylint: disable-next=import-error
 from tests.support.unit import SkipTest
 from tests.support.unit import _id
 from tests.support.unit import skip
@@ -1069,7 +1066,7 @@ def requires_system_grains(func):
     def decorator(*args, **kwargs):
         if not hasattr(requires_system_grains, "__grains__"):
             # Late import
-            #  pylint: disable-next=import-error,import-outside-toplevel
+            #  pylint: disable-next=import-outside-toplevel
             from tests.support.sminion import build_minion_opts
 
             opts = build_minion_opts(minion_id="runtests-internal-sminion")
@@ -1087,7 +1084,7 @@ def _check_required_sminion_attributes(sminion_attr, *required_items):
     :return The packages that are not available
     """
     # Late import
-    #  pylint: disable-next=import-error,import-outside-toplevel
+    #  pylint: disable-next=import-outside-toplevel
     from tests.support.sminion import create_sminion
 
     required_salt_items = set(required_items)

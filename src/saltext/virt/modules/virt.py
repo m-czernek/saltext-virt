@@ -117,6 +117,8 @@ YB      10**24
 ======  =======
 """
 
+# pylint: disable=import-error
+
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
 
