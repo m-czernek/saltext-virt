@@ -36,19 +36,24 @@ import types
 import attr
 import pytest
 import pytestskipmarkers.utils.platform
-import salt.ext.tornado.ioloop
-import salt.ext.tornado.web
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.pycrypto
 import salt.utils.stringutils
 import salt.utils.versions
+import tornado.ioloop
+import tornado.web
 from pytestshellutils.exceptions import ProcessFailed
 from pytestshellutils.utils import ports
 from pytestshellutils.utils.processes import ProcessResult
 
+#  pylint: disable-next=import-error
 from tests.support.mock import patch
+
+#  pylint: disable-next=import-error
 from tests.support.runtests import RUNTIME_VARS
+
+#  pylint: disable-next=import-error
 from tests.support.unit import SkipTest
 from tests.support.unit import _id
 from tests.support.unit import skip
@@ -90,6 +95,7 @@ def no_symlinks():
     return True
 
 
+#  pylint: disable-next=invalid-name
 def destructiveTest(caller):
     """
     Mark a test case as a destructive test for example adding or removing users
@@ -128,6 +134,7 @@ def destructiveTest(caller):
     return caller
 
 
+#  pylint: disable-next=invalid-name
 def expensiveTest(caller):
     """
     Mark a test case as an expensive test, for example, a test which can cost
@@ -166,6 +173,7 @@ def expensiveTest(caller):
     return caller
 
 
+#  pylint: disable-next=invalid-name
 def slowTest(caller):
     """
     Mark a test case as a slow test.
@@ -296,12 +304,16 @@ class RedirectStdStreams:
 
     def __init__(self, stdout=None, stderr=None):
         if stdout is None:
+            #  pylint: disable-next=unknown-option-value
             # pylint: disable=resource-leakage
             stdout = salt.utils.files.fopen(os.devnull, "w")
+            #  pylint: disable-next=unknown-option-value
             # pylint: enable=resource-leakage
         if stderr is None:
+            #  pylint: disable-next=unknown-option-value
             # pylint: disable=resource-leakage
             stderr = salt.utils.files.fopen(os.devnull, "w")
+            #  pylint: disable-next=unknown-option-value
             # pylint: enable=resource-leakage
 
         self.__stdout = stdout
@@ -317,8 +329,10 @@ class RedirectStdStreams:
         self.unredirect()
 
     def redirect(self):
+        #  pylint: disable-next=attribute-defined-outside-init
         self.old_stdout = sys.stdout
         self.old_stdout.flush()
+        #  pylint: disable-next=attribute-defined-outside-init
         self.old_stderr = sys.stderr
         self.old_stderr.flush()
         self.patcher.start()
@@ -381,6 +395,7 @@ class TstSuiteLoggingHandler:
             def emit(self, record):
                 self.messages.append(self.format(record))
 
+        #  pylint: disable-next=attribute-defined-outside-init
         self.handler = Handler(self.level)
         formatter = logging.Formatter(self.format)
         self.handler.setFormatter(formatter)
@@ -424,6 +439,7 @@ class TstSuiteLoggingHandler:
         if self.activated:
             return self.handler.lock
 
+    #  pylint: disable-next=invalid-name
     def createLock(self):
         if self.activated:
             return self.handler.createLock()
@@ -674,7 +690,9 @@ def with_system_user(username, on_existing="delete", delete=True, password=None,
     """
     if on_existing not in ("nothing", "delete", "skip"):
         raise RuntimeError(
-            "The value of 'on_existing' can only be one of, " "'nothing', 'delete' and 'skip'"
+            # pylint: disable-next=implicit-str-concat
+            "The value of 'on_existing' can only be one of, "
+            "'nothing', 'delete' and 'skip'"
         )
 
     if not isinstance(delete, bool):
@@ -717,6 +735,7 @@ def with_system_user(username, on_existing="delete", delete=True, password=None,
                 else:
                     hashed_password = salt.utils.pycrypto.gen_hash(password=password)
                 hashed_password = f"'{hashed_password}'"
+                #  pylint: disable-next=unused-variable
                 add_pwd = cls.run_function("shadow.set_password", [username, hashed_password])
 
             failure = None
@@ -773,7 +792,9 @@ def with_system_group(group, on_existing="delete", delete=True):
     """
     if on_existing not in ("nothing", "delete", "skip"):
         raise RuntimeError(
-            "The value of 'on_existing' can only be one of, " "'nothing', 'delete' and 'skip'"
+            # pylint: disable-next=implicit-str-concat
+            "The value of 'on_existing' can only be one of,"
+            "'nothing', 'delete' and 'skip'"
         )
 
     if not isinstance(delete, bool):
@@ -863,7 +884,9 @@ def with_system_user_and_group(username, group, on_existing="delete", delete=Tru
     """
     if on_existing not in ("nothing", "delete", "skip"):
         raise RuntimeError(
-            "The value of 'on_existing' can only be one of, " "'nothing', 'delete' and 'skip'"
+            # pylint: disable-next=implicit-str-concat
+            "The value of 'on_existing' can only be one of, "
+            "'nothing', 'delete' and 'skip'"
         )
 
     if not isinstance(delete, bool):
@@ -981,6 +1004,7 @@ class WithTempfile:
         self.kwargs = kwargs
 
     def __call__(self, func):
+        #  pylint: disable-next=attribute-defined-outside-init
         self.func = func
         return functools.wraps(func)(
             # pylint: disable=unnecessary-lambda
@@ -1001,6 +1025,7 @@ class WithTempfile:
                 pass
 
 
+#  pylint: disable-next=invalid-name
 with_tempfile = WithTempfile
 
 
@@ -1012,6 +1037,7 @@ class WithTempdir:
         self.kwargs = kwargs
 
     def __call__(self, func):
+        #  pylint: disable-next=attribute-defined-outside-init
         self.func = func
         return functools.wraps(func)(
             # pylint: disable=unnecessary-lambda
@@ -1029,6 +1055,7 @@ class WithTempdir:
             shutil.rmtree(tempdir, ignore_errors=True)
 
 
+#  pylint: disable-next=invalid-name
 with_tempdir = WithTempdir
 
 
@@ -1042,6 +1069,7 @@ def requires_system_grains(func):
     def decorator(*args, **kwargs):
         if not hasattr(requires_system_grains, "__grains__"):
             # Late import
+            #  pylint: disable-next=import-error,import-outside-toplevel
             from tests.support.sminion import build_minion_opts
 
             opts = build_minion_opts(minion_id="runtests-internal-sminion")
@@ -1059,6 +1087,7 @@ def _check_required_sminion_attributes(sminion_attr, *required_items):
     :return The packages that are not available
     """
     # Late import
+    #  pylint: disable-next=import-error,import-outside-toplevel
     from tests.support.sminion import create_sminion
 
     required_salt_items = set(required_items)
@@ -1131,6 +1160,7 @@ def skip_if_binaries_missing(*binaries, **kwargs):
         " and instead use `@pytest.mark.skip_if_binaries_missing`.",
         stacklevel=3,
     )
+    #  pylint: disable-next=import-outside-toplevel
     import salt.utils.path
 
     if len(binaries) == 1:
@@ -1249,6 +1279,7 @@ def http_basic_auth(login_cb=lambda username, password: False):
 
     def wrapper(handler_class):
         def wrap_execute(handler_execute):
+            #  pylint: disable-next=unused-argument
             def check_auth(handler, kwargs):
 
                 auth = handler.request.headers.get("Authorization")
@@ -1381,11 +1412,12 @@ class Webserver:
         try:
             self.root = os.path.realpath(root)
         except AttributeError:
+            #  pylint: disable-next=raise-missing-from
             raise ValueError("root must be a string")
 
         self.port = port
         self.wait = wait
-        self.handler = handler if handler is not None else salt.ext.tornado.web.StaticFileHandler
+        self.handler = handler if handler is not None else tornado.web.StaticFileHandler
         self.web_root = None
         self.ssl_opts = ssl_opts
 
@@ -1393,14 +1425,17 @@ class Webserver:
         """
         Threading target which stands up the tornado application
         """
-        self.ioloop = salt.ext.tornado.ioloop.IOLoop()
+        #  pylint: disable-next=attribute-defined-outside-init
+        self.ioloop = tornado.ioloop.IOLoop()
         asyncio.set_event_loop(self.ioloop.asyncio_loop)
-        if self.handler == salt.ext.tornado.web.StaticFileHandler:
-            self.application = salt.ext.tornado.web.Application(
+        if self.handler == tornado.web.StaticFileHandler:
+            #  pylint: disable-next=attribute-defined-outside-init
+            self.application = tornado.web.Application(
                 [(r"/(.*)", self.handler, {"path": self.root})]
             )
         else:
-            self.application = salt.ext.tornado.web.Application([(r"/(.*)", self.handler)])
+            #  pylint: disable-next=attribute-defined-outside-init
+            self.application = tornado.web.Application([(r"/(.*)", self.handler)])
         self.application.listen(self.port, ssl_options=self.ssl_opts)
         self.ioloop.start()
 
@@ -1431,6 +1466,7 @@ class Webserver:
                 raise ValueError(err_msg)
             return "/".join((self.web_root, relpath))
         except AttributeError:
+            #  pylint: disable-next=raise-missing-from
             raise ValueError(err_msg)
 
     def start(self):
@@ -1442,6 +1478,7 @@ class Webserver:
 
         self.web_root = "http{}://127.0.0.1:{}".format("s" if self.ssl_opts else "", self.port)
 
+        #  pylint: disable-next=attribute-defined-outside-init
         self.server_thread = threading.Thread(target=self.target)
         self.server_thread.daemon = True
         self.server_thread.start()
@@ -1452,6 +1489,7 @@ class Webserver:
             if idx != self.wait:
                 time.sleep(1)
         else:
+            #  pylint: disable-next=broad-exception-raised
             raise Exception(
                 "Failed to start tornado webserver on 127.0.0.1:{} within "
                 "{} seconds".format(self.port, self.wait)
@@ -1472,13 +1510,14 @@ class Webserver:
         self.stop()
 
 
-class SaveRequestsPostHandler(salt.ext.tornado.web.RequestHandler):
+class SaveRequestsPostHandler(tornado.web.RequestHandler):
     """
     Save all requests sent to the server.
     """
 
     received_requests = []
 
+    #  pylint: disable-next=unused-argument
     def post(self, *args):  # pylint: disable=arguments-differ
         """
         Handle the post
@@ -1492,7 +1531,7 @@ class SaveRequestsPostHandler(salt.ext.tornado.web.RequestHandler):
         raise NotImplementedError()
 
 
-class MirrorPostHandler(salt.ext.tornado.web.RequestHandler):
+class MirrorPostHandler(tornado.web.RequestHandler):
     """
     Mirror a POST body back to the client
     """
@@ -1544,6 +1583,7 @@ class PatchedEnviron:
         os.environ.update(self.original_environ)
 
 
+#  pylint: disable-next=invalid-name
 patched_environ = PatchedEnviron
 
 
@@ -1608,6 +1648,7 @@ class VirtualEnv:
         try:
             self._create_virtualenv()
         except subprocess.CalledProcessError:
+            #  pylint: disable-next=raise-missing-from
             raise AssertionError("Failed to create virtualenv")
         return self
 
@@ -1643,6 +1684,7 @@ class VirtualEnv:
             try:
                 proc.check_returncode()
             except subprocess.CalledProcessError:
+                #  pylint: disable-next=raise-missing-from
                 raise ProcessFailed("Command failed return code check", process_result=proc)
         return ret
 
@@ -1849,4 +1891,5 @@ class Keys:
         return self
 
     def __exit__(self, *_):
+        #  pylint: disable-next=missing-final-newline,unexpected-line-ending-format
         shutil.rmtree(str(self.priv_path.parent), ignore_errors=True)

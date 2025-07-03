@@ -113,6 +113,7 @@ def virt_minion_1(
 
 
 @pytest.fixture(scope="module")
+#  pylint: disable-next=unused-argument
 def salt_cli(salt_master, virt_minion_0, virt_minion_1):
     return salt_master.salt_cli()
 
@@ -423,6 +424,7 @@ class TestVirtMigrateTest:
         assert isinstance(domains, list)
         assert domains == []
 
+    #  pylint: disable-next=unused-argument
     def test_ssh_migration(self, salt_cli, virt_minion_0, virt_minion_1, prep_virt, virt_domain):
         """
         Test domain migration over SSH, TCP and TLS transport protocol
@@ -472,6 +474,7 @@ class TestVirtMigrateTest:
         assert isinstance(domains, list)
         assert domains == [virt_domain], "Failed to migrate VM"
 
+    #  pylint: disable-next=unused-argument
     def test_tcp_migration(self, salt_cli, virt_minion_0, virt_minion_1, prep_virt, virt_domain):
         """
         Test domain migration over SSH, TCP and TLS transport protocol
@@ -513,6 +516,7 @@ class TestVirtMigrateTest:
         assert isinstance(domains, list)
         assert domains == [virt_domain], "Failed to migrate VM"
 
+    #  pylint: disable-next=unused-argument
     def test_tls_migration(self, salt_cli, virt_minion_0, virt_minion_1, prep_virt, virt_domain):
         """
         Test domain migration over SSH, TCP and TLS transport protocol
