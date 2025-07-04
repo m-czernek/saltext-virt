@@ -9,6 +9,7 @@ Salt Extension for interacting with Virt
   :hidden:
 
   topics/installation
+  topics/virt/index.rst
 
 .. toctree::
   :maxdepth: 2
@@ -18,6 +19,7 @@ Salt Extension for interacting with Virt
   ref/modules/index
   ref/runners/index
   ref/states/index
+  ref/utils/index
 
 .. toctree::
   :maxdepth: 2

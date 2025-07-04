@@ -67,9 +67,9 @@ The calls not using the libvirt connection setup are:
 - ``is_*hyper``
 - all migration functions
 
-- `libvirt ESX URI format <http://libvirt.org/drvesx.html#uriformat>`_
-- `libvirt URI format <http://libvirt.org/uri.html#URI_config>`_
-- `libvirt authentication configuration <http://libvirt.org/auth.html#Auth_client_config>`_
+- `libvirt ESX URI format <http://libvirt.org/drvesx.html>`_
+- `libvirt URI format <http://libvirt.org/uri.html>`_
+- `libvirt authentication configuration <http://libvirt.org/auth.html>`_
 
 Units
 ==========
@@ -170,9 +170,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 # Set up template environment
-JINJA = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(os.path.join(salt.utils.templates.TEMPLATE_DIRNAME, "virt"))
-)
+JINJA = None
 
 CACHE_DIR = "/var/lib/libvirt/saltinst"
 
@@ -191,6 +189,20 @@ def __virtual__():
     if not HAS_LIBVIRT:
         return (False, "Unable to locate or import python libvirt library.")
     return "virt"
+
+
+def __init_jinja():
+    """
+    Init jinja global variable lazily to avoid instantiation at module level
+    """
+    # pylint: disable-next=global-statement
+    global JINJA
+    if not JINJA:
+        JINJA = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(
+                os.path.join(salt.utils.templates.TEMPLATE_DIRNAME, "virt")
+            )
+        )
 
 
 def __get_request_auth(username, password):
@@ -945,6 +957,7 @@ def _gen_xml(
     """
     Generate the XML string to define a libvirt VM
     """
+    __init_jinja()
     context = {
         "hypervisor": hypervisor,
         "name": name,
@@ -1154,6 +1167,7 @@ def _gen_vol_xml(
     """
     Generate the XML string to define a libvirt storage volume
     """
+    __init_jinja()
     size = int(size) * 1024  # MB
     context = {
         "type": type,
@@ -1191,6 +1205,7 @@ def _gen_net_xml(
     """
     Generate the XML string to define a libvirt network
     """
+    __init_jinja()
     if isinstance(vport, str):
         vport_context = {"type": vport}
     else:
@@ -1269,6 +1284,7 @@ def _gen_pool_xml(
     """
     Generate the XML string to define a libvirt storage pool
     """
+    __init_jinja()
     hosts = [host.split(":") for host in source_hosts or []]
     source = None
     if any(
@@ -1317,6 +1333,7 @@ def _gen_secret_xml(auth_type, usage, description):
     """
     Generate a libvirt secret definition XML
     """
+    __init_jinja()
     context = {
         "type": auth_type,
         "usage": usage,
@@ -2739,8 +2756,8 @@ def init(
         virt:
             images: /data/my/vm/images/
 
-    .. _disk element: https://libvirt.org/formatdomain.html#elementsDisks
-    .. _graphics element: https://libvirt.org/formatdomain.html#elementsGraphics
+    .. _disk element: https://libvirt.org/formatdomain.html
+    .. _graphics element: https://libvirt.org/formatdomain.html
     """
     try:
         conn = __get_conn(**kwargs)
@@ -5400,7 +5417,7 @@ def migrate(vm_, target, **kwargs):
             tunnel: True
 
     For more details on tunnelled data migrations, report to
-    https://libvirt.org/migration.html#transporttunnel
+    https://libvirt.org/migration.html
     """
 
     conn = __get_conn()
@@ -7792,7 +7809,7 @@ def pool_define(
         Each item in the list is a dictionary with ``path`` and optionally ``part_separator``
         keys. The path is the qualified name for iSCSI devices.
 
-        Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
+        Report to `this libvirt page <https://libvirt.org/formatstorage.html>`_
         for more information on the use of ``part_separator``
     :param source_dir:
         Path to the source directory for pools of type ``dir``, ``netfs`` or ``gluster``.
@@ -7809,7 +7826,7 @@ def pool_define(
         The ``parent_address`` value is a dictionary with ``unique_id`` and ``address`` keys.
         The address represents a PCI address and is itself a dictionary with ``domain``, ``bus``,
         ``slot`` and ``function`` properties.
-        Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
+        Report to `this libvirt page <https://libvirt.org/formatstorage.html>`_
         for the meaning and possible values of these properties.
     :param source_hosts:
         List of source for pools backed by storage from remote servers. Each item is the hostname
@@ -8011,7 +8028,7 @@ def pool_update(
         Each item in the list is a dictionary with ``path`` and optionally ``part_separator``
         keys. The path is the qualified name for iSCSI devices.
 
-        Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
+        Report to `this libvirt page <https://libvirt.org/formatstorage.html>`_
         for more information on the use of ``part_separator``
     :param source_dir:
         Path to the source directory for pools of type ``dir``, ``netfs`` or ``gluster``.
@@ -8028,7 +8045,7 @@ def pool_update(
         The ``parent_address`` value is a dictionary with ``unique_id`` and ``address`` keys.
         The address represents a PCI address and is itself a dictionary with ``domain``, ``bus``,
         ``slot`` and ``function`` properties.
-        Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
+        Report to `this libvirt page <https://libvirt.org/formatstorage.html>`_
         for the meaning and possible values of these properties.
     :param source_hosts:
         List of source for pools backed by storage from remote servers. Each item is the hostname

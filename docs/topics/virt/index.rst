@@ -66,4 +66,3 @@ Deploy from Network or Disk
 .. toctree::
     disk
     nic
-    ../tutorials/cloud_controller
